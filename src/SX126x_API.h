@@ -299,6 +299,7 @@ class SX126x_API
         static void setPins(int8_t nss, int8_t reset, int8_t busy);
         static void usePins(int8_t nss, int8_t busy);
         static void reset(int8_t reset=_reset, int8_t busy=_busy);
+        static void begin();
 
         // SX126x API: Operational Modes Commands
         static void setSleep(uint8_t sleepConfig);
@@ -336,7 +337,7 @@ class SX126x_API
         static void getPacketType(uint8_t* packetType);
         static void setTxParams(uint8_t power, uint8_t rampTime);
         static void setModulationParams(uint8_t* modulationParams);
-        static void setModulationParamsLoRa(uint8_t sf, uint8_t bw, uint8_t cr, uint8_t lowDataRateOptimize);
+        static void setModulationParamsLoRa(uint8_t sf, uint8_t bw, uint8_t cr, uint8_t ldro);
         static void setModulationParamsFSK(uint32_t br, uint8_t pulseShape, uint8_t bandwidth, uint32_t Fdev);
         static void setPacketParams(uint8_t* packetParams);
         static void setPacketParamsLoRa(uint16_t preambleLength, uint8_t headerType, uint8_t payloadLength, uint8_t crcType, uint8_t invertIq);

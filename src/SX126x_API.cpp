@@ -37,6 +37,11 @@ void SX126x_API::reset(int8_t reset, int8_t busy)
     while (digitalRead(busy) == HIGH);
 }
 
+void SX126x_API::begin()
+{
+    _spi->begin();
+}
+
 void SX126x_API::setSleep(uint8_t sleepConfig)
 {
     if (sleepConfig > 7) return;
@@ -267,17 +272,17 @@ void SX126x_API::setModulationParams(uint8_t* modulationParams)
     _writeBytes(0x8B, modulationParams, 8);
 }
 
-void SX126x_API::setModulationParamsLoRa(uint8_t sf, uint8_t bw, uint8_t cr, uint8_t lowDataRateOptimize)
+void SX126x_API::setModulationParamsLoRa(uint8_t sf, uint8_t bw, uint8_t cr, uint8_t ldro)
 {
     if ((sf < 0x05) || (sf > 0x0C)) return;
     if (bw > 0x0A) return;
     if (cr > 0x04) return;
-    if (lowDataRateOptimize > 0x01) return;
+    if (ldro > 0x01) return;
     uint8_t buf[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     buf[0] = sf;
     buf[1] = bw;
     buf[2] = cr;
-    buf[3] = lowDataRateOptimize;
+    buf[3] = ldro;
     _writeBytes(0x8B, buf, 8);
 }
 

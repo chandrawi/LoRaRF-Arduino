@@ -25,7 +25,7 @@ uint8_t power = 0x16;
 
 // Define modulation parameters setting
 uint8_t sf = SX126X_LORA_SF_7;
-uint8_t bw = SX126X_LORA_BW_20;
+uint8_t bw = SX126X_LORA_BW_125;
 uint8_t cr = SX126X_LORA_CR_4_5;
 uint8_t ldro = SX126X_LORA_LDRO_ON;
 
@@ -86,9 +86,10 @@ void settingFunction() {
   pinMode(rxenPin, OUTPUT);
   pinMode(txenPin, OUTPUT);
 
-  // Reset RF module by setting resetPin to LOW
+  // Reset RF module by setting resetPin to LOW and begin SPI communication
   Serial.println("Resetting RF module");
   Api.reset();
+  Api.begin();
 
   // Optionally configure TCXO or XTAL used in RF module
 #ifdef SX126X_TCXO
