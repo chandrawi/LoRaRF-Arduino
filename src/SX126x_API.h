@@ -259,40 +259,16 @@
 #define SX126X_RX_GAIN_POWER_SAVING                   0x94        // gain used in Rx mode: power saving gain (default)
 #define SX126X_RX_GAIN_BOOSTED                        0x96        //                       boosted gain
 
-// Status TX and RX operation
-#define SX126X_STATUS_DEFAULT                         0           // default status (false)
-#define SX126X_STATUS_TX_WAIT                         1
-#define SX126X_STATUS_TX_TIMEOUT                      2
-#define SX126X_STATUS_TX_DONE                         3
-#define SX126X_STATUS_RX_WAIT                         4
-#define SX126X_STATUS_RX_CONTINUOUS_WAIT              5
-#define SX126X_STATUS_RX_TIMEOUT                      6
-#define SX126X_STATUS_RX_DONE                         7
-#define SX126X_STATUS_HEADER_ERR                      8
-#define SX126X_STATUS_CRC_ERR                         9
-#define SX126X_STATUS_CAD_WAIT                        10
-#define SX126X_STATUS_CAD_DETECTED                    11
-#define SX126X_STATUS_CAD_DONE                        12
-
 // Default Hardware Configuration
-#define SX126X_PIN_RF_IRQ                             1
 #define SX126X_PIN_NSS                                10
 #define SX126X_PIN_RESET                              4
 #define SX126X_PIN_BUSY                               5
-#define SX126X_PIN_IRQ                                -1
 #define SX126X_SPI                                    SPI
 #define SX126X_SPI_FREQUENCY                          4000000
 
-// Default LoRa Configuration
-#define SX126X_LORA_SF                                SX126X_LORA_SF_7
-#define SX126X_LORA_BW                                SX126X_LORA_BW_250
-#define SX126X_LORA_CR                                SX126X_LORA_CR_4_5
-#define SX126X_LORA_HEADER                            SX126X_LORA_HEADER_EXPLICIT
-#define SX126X_LORA_PREAMBLE_LENGTH                   12
-#define SX126X_LORA_PAYLOAD_LENGTH                    64
-
 class SX126x_API
 {
+
     public:
 
         static void setSPI(SPIClass &SpiObject);

@@ -4,8 +4,32 @@
 #include <BaseLoRa.h>
 #include <SX126x_API.h>
 
+// Status TX and RX operation
+#define SX126X_STATUS_DEFAULT                         LORA_STATUS_DEFAULT
+#define SX126X_STATUS_TX_WAIT                         LORA_STATUS_TX_WAIT
+#define SX126X_STATUS_TX_TIMEOUT                      LORA_STATUS_TX_TIMEOUT
+#define SX126X_STATUS_TX_DONE                         LORA_STATUS_TX_DONE
+#define SX126X_STATUS_RX_WAIT                         LORA_STATUS_RX_WAIT
+#define SX126X_STATUS_RX_CONTINUOUS_WAIT              LORA_STATUS_RX_CONTINUOUS_WAIT
+#define SX126X_STATUS_RX_TIMEOUT                      LORA_STATUS_RX_TIMEOUT
+#define SX126X_STATUS_RX_DONE                         LORA_STATUS_RX_DONE
+#define SX126X_STATUS_HEADER_ERR                      LORA_STATUS_HEADER_ERR
+#define SX126X_STATUS_CRC_ERR                         LORA_STATUS_CRC_ERR
+#define SX126X_STATUS_CAD_WAIT                        LORA_STATUS_CAD_WAIT
+#define SX126X_STATUS_CAD_DETECTED                    LORA_STATUS_CAD_DETECTED
+#define SX126X_STATUS_CAD_DONE                        LORA_STATUS_CAD_DONE
+
+// Default Hardware Configuration
+#define SX126X_PIN_RF_IRQ                             1
+#define SX126X_PIN_IRQ                                -1
+
+#ifdef USE_LORA_SX126X
+class SX126x
+#else
 class SX126x : public BaseLoRa
+#endif
 {
+
     public:
 
         SX126x();
