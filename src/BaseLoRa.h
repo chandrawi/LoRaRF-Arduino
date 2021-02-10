@@ -3,6 +3,11 @@
 
 #include <Arduino.h>
 
+// TX and RX operation mode
+#define LORA_TX_MODE_SINGLE                         0x000000    // Tx timeout duration: no timeout (Rx single mode)
+#define LORA_RX_MODE_SINGLE                         0x000000    // Rx timeout duration: no timeout (Rx single mode)
+#define LORA_RX_MODE_CONTINUOUS                     0xFFFFFF    //                      infinite (Rx continuous mode)
+
 // Status TX and RX operation
 #define LORA_STATUS_DEFAULT                         0           // default status (false)
 #define LORA_STATUS_TX_WAIT                         1
