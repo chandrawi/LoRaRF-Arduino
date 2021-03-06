@@ -249,7 +249,7 @@
 #define SX126X_IMG_CALIB_ERR                          0x0010      //                image calibration failed
 #define SX126X_XOSC_START_ERR                         0x0020      //                crystal oscillator failed to start
 #define SX126X_PLL_LOCK_ERR                           0x0040      //                PLL failed to lock
-#define SX126X_PA_RAMP_ERR                            0b0100      //                PA ramping failed
+#define SX126X_PA_RAMP_ERR                            0x0100      //                PA ramping failed
 
 // LoraSyncWord
 #define SX126X_LORA_SYNC_WORD_PUBLIC                  0x3444      // LoRa SyncWord for public network

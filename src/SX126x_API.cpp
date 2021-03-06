@@ -44,15 +44,15 @@ void SX126x_API::begin()
 
 void SX126x_API::setSleep(uint8_t sleepConfig)
 {
-    if (sleepConfig > 7) return;
-    if (sleepConfig & 0b00000010) return;
+    if (sleepConfig > 0x07) return;
+    if (sleepConfig & 0x02) return;
     _writeBytes(0x84, &sleepConfig, 1);
 }
 
-void SX126x_API::setStandby(uint8_t standbyMode)
+void SX126x_API::setStandby(uint8_t standbyConfig)
 {
-    if (standbyMode > 1) return;
-    _writeBytes(0x80, &standbyMode, 1);
+    if (standbyConfig > 0x01) return;
+    _writeBytes(0x80, &standbyConfig, 1);
 }
 
 void SX126x_API::setFs()
@@ -135,9 +135,9 @@ void SX126x_API::setPaConfig(uint8_t paDutyCycle, uint8_t hpMax, uint8_t deviceS
 {
     if (deviceSel > 0x01) return;
     if (paLut != 0x01) return;
-    if (hpMax > 7) return;
-    if (paDutyCycle > 7) return;
-    if ((deviceSel == 0) && (paDutyCycle > 4)) return;
+    if (hpMax > 0x07) return;
+    if (paDutyCycle > 0x07) return;
+    if ((deviceSel == 0x00) && (paDutyCycle > 0x04)) return;
     uint8_t buf[4];
     buf[0] = paDutyCycle;
     buf[1] = hpMax;
@@ -148,7 +148,7 @@ void SX126x_API::setPaConfig(uint8_t paDutyCycle, uint8_t hpMax, uint8_t deviceS
 
 void SX126x_API::setRxTxFallbackMode(uint8_t fallbackMode)
 {
-    if ((fallbackMode != 0x40) || (fallbackMode != 0x30) || (fallbackMode != 0x20)) return;
+    if ((fallbackMode != 0x40) && (fallbackMode != 0x30) && (fallbackMode != 0x20)) return;
     _writeBytes(0x93, &fallbackMode, 1);
 }
 
@@ -227,6 +227,7 @@ void SX126x_API::setDio2AsRfSwitchCtrl(uint8_t enable)
 
 void SX126x_API::setDio3AsTcxoCtrl(uint8_t tcxoVoltage, uint32_t delay)
 {
+    if (tcxoVoltage > 0x07) return;
     uint8_t buf[4];
     buf[0] = tcxoVoltage;
     buf[1] = (delay >> 16) & 0xFF;
@@ -239,7 +240,7 @@ void SX126x_API::setRfFrequency(uint32_t rfFreq)
 {
     if ((rfFreq < 134217728) || (rfFreq > 1073741824)) return; // range 128 Mhz - 1024 Mhz
     uint8_t buf[4];
-    buf[0] = rfFreq & 0xFF;
+    buf[0] = (rfFreq >> 24) & 0xFF;
     buf[1] = (rfFreq >> 16) & 0xFF;
     buf[2] = (rfFreq >> 8) & 0xFF;
     buf[3] = rfFreq & 0xFF;
@@ -255,7 +256,7 @@ void SX126x_API::setPacketType(uint8_t packetType)
 void SX126x_API::getPacketType(uint8_t* packetType)
 {
     uint8_t buf[2];
-    _readBytes(0x11, buf, 1);
+    _readBytes(0x11, buf, 2);
     *packetType = buf[1];
 }
 
@@ -306,7 +307,7 @@ void SX126x_API::setPacketParams(uint8_t* packetParams)
 
 void SX126x_API::setPacketParamsLoRa(uint16_t preambleLength, uint8_t headerType, uint8_t payloadLength, uint8_t crcType, uint8_t invertIq)
 {
-    if (preambleLength == 0) return;
+    if (preambleLength == 0x00) return;
     if (headerType > 0x01) return;
     if (crcType > 0x01) return;
     if (invertIq > 0x01) return;
