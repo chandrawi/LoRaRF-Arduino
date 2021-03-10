@@ -54,11 +54,11 @@ void setup() {
   // Configure packet parameter including header type, preamble length, payload length, and CRC type
   // The explicit packet includes header contain CR, number of byte, and CRC type
   // Receiver can receive packet with different CR and packet parameters in explicit header mode
-  Serial.println("Set packet parameters:\n\tExplicit header type\n\tPreamble length = 12\n\tPayload Length = 16\n\tCRC on");
+  Serial.println("Set packet parameters:\n\tExplicit header type\n\tPreamble length = 12\n\tPayload Length = 15\n\tCRC on");
   uint8_t headerType = SX126X_LORA_HEADER_EXPLICIT;                   // Explicit header mode
   uint16_t preambleLength = 12;                                       // Set preamble length to 12
   uint8_t payloadLength = 15;                                         // Initialize payloadLength to 15
-  bool crcType = true;                                                // Set CRC enable
+  uint8_t crcType = SX126X_LORA_CRC_ON;                               // Set CRC enable
   LoRa.setLoRaPacket(headerType, preambleLength, payloadLength, crcType);
 
   // Set syncronize word for public network (0x3444)

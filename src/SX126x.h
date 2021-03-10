@@ -58,7 +58,7 @@ class SX126x : public BaseLoRa
         void setFrequency(uint32_t frequency);
         void setTxPower(uint32_t txPower);
         void setRxGain(uint8_t rxGain);
-        void setLoRaModulation(uint8_t sf, uint8_t bw, uint8_t cr, uint8_t ldro=SX126X_LORA_LDRO_ON);
+        void setLoRaModulation(uint8_t sf, uint8_t bw, uint8_t cr, uint8_t ldro=SX126X_LORA_LDRO_OFF);
         void setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t payloadLength, uint8_t crcType=SX126X_LORA_CRC_ON, uint8_t invertIq=SX126X_LORA_IQ_STANDARD);
         void setLoRaPayloadLength(uint8_t payloadLength);
         void setLoRaSyncWord(uint16_t sw);

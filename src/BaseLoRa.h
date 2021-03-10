@@ -24,7 +24,7 @@
 #define LORA_STATUS_CAD_DONE                        12
 
 // Uncomment one of line below to use a LoRa model exclusively
-#define USE_LORA_SX126X
+// #define USE_LORA_SX126X
 // #define USE_LORA_SX127X
 
 class BaseLoRa

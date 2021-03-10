@@ -24,7 +24,7 @@ uint8_t gain = SX126X_RX_GAIN_POWER_SAVING;
 uint8_t sf = SX126X_LORA_SF_7;
 uint8_t bw = SX126X_LORA_BW_125;
 uint8_t cr = SX126X_LORA_CR_4_5;
-uint8_t ldro = SX126X_LORA_LDRO_ON;
+uint8_t ldro = SX126X_LORA_LDRO_OFF;
 
 // Define packet parameters setting
 uint16_t preambleLength = 0x0C;
@@ -132,8 +132,7 @@ void settingFunction() {
 
   // Set predefined syncronize word
   Serial.print("Set syncWord to 0x");
-  Serial.print(sw[0], HEX);
-  Serial.println(sw[1], HEX);
+  Serial.println((sw[0] << 8) + sw[1], HEX);
   Api.writeRegister(0x0740, sw, 2);
 
 }

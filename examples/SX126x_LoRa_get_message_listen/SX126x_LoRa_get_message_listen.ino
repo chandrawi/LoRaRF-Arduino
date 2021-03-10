@@ -65,7 +65,7 @@ void setup() {
   uint8_t headerType = SX126X_LORA_HEADER_IMPLICIT;                   // Implicit header mode
   uint16_t preambleLength = 12;                                       // Set preamble length to 12
   uint8_t payloadLength = messageLen;                                 // Set payloadLength same as message length
-  bool crcType = true;                                                // Set CRC on
+  uint8_t crcType = SX126X_LORA_CRC_ON;                               // Set CRC enable
   LoRa.setLoRaPacket(headerType, preambleLength, payloadLength, crcType);
 
   // Set syncronize word for private network (0x1424)
