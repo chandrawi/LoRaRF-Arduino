@@ -54,7 +54,7 @@ class SX126x : public BaseLoRa
         void setRegulator(uint8_t regMode);
         void setCurrentProtection(uint8_t level);
 
-        void setPacketType(uint8_t packetType=SX126X_PACKET_TYPE_LORA);
+        void setModem(uint8_t modem=SX126X_LORA_MODEM);
         void setFrequency(uint32_t frequency);
         void setTxPower(uint32_t txPower);
         void setRxGain(uint8_t rxGain);
@@ -129,7 +129,7 @@ class SX126x : public BaseLoRa
         int8_t _nss, _reset, _busy;
         int8_t _irq, _txen, _rxen;
         int8_t _dio;
-        uint8_t _packetType;
+        uint8_t _modem;
         uint8_t _sf, _bw, _cr, _ldro;
         uint8_t _headerType, _payloadLength, _crcType, _invertIq;
         uint16_t _preambleLength;

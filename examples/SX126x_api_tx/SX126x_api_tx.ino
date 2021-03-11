@@ -63,7 +63,7 @@ void loop() {
 
   // Display status if error
   if (status & SX126X_IRQ_TIMEOUT){
-    Serial.println("Receive timeout");
+    Serial.println("Transmit timeout");
   }
 
   // Don't load RF module with continous transmit
@@ -105,7 +105,7 @@ void settingFunction() {
   Serial.println("Going to standby mode");
   Api.setStandby(SX126X_STANDBY_RC);
   Serial.println("Set packet type to LoRa");
-  Api.setPacketType(SX126X_PACKET_TYPE_LORA);
+  Api.setPacketType(SX126X_LORA_MODEM);
 
   // Set frequency to selected frequency (rfFrequency = rfFreq * 32000000 / 2 ^ 25)
   Serial.print("Set frequency to ");
@@ -172,8 +172,9 @@ uint16_t transmitFunction(char* msg, uint8_t len, uint32_t timeout) {
   // Attach irqPin to DIO1
   Serial.println("Attach interrupt on pin 2 (irqPin)");
   attachInterrupt(digitalPinToInterrupt(irqPin), checkTransmitDone, RISING);
-  digitalWrite(rxenPin, LOW);
+  // Set txen and rxen pin state for transmitting packet
   digitalWrite(txenPin, HIGH);
+  digitalWrite(rxenPin, LOW);
 
   // Wait for TX done interrupt and calcualte transmit time
   Serial.println("Wait for TX done interrupt");

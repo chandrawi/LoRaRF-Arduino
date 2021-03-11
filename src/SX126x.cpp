@@ -29,7 +29,7 @@ bool SX126x::begin(int8_t nss, int8_t reset, int8_t busy, int8_t irq, int8_t txe
     SX126x_API::reset(reset, busy);
     SX126x_API::setStandby(SX126X_STANDBY_RC);
     if (getMode() != SX126X_STATUS_MODE_STDBY_RC) return false;
-    SX126x_API::setPacketType(SX126X_PACKET_TYPE_LORA);
+    SX126x_API::setPacketType(SX126X_LORA_MODEM);
     
     SX126x_API::fixResistanceAntenna();
     return true;
@@ -142,11 +142,11 @@ void SX126x::setCurrentProtection(uint8_t level)
     SX126x_API::writeRegister(SX126X_REG_OCP_CONFIGURATION, &level, 1);
 }
 
-void SX126x::setPacketType(uint8_t packetType)
+void SX126x::setModem(uint8_t modem)
 {
-    _packetType = packetType;
+    _modem = modem;
     SX126x_API::setStandby(SX126X_STANDBY_RC);
-    SX126x_API::setPacketType(packetType);
+    SX126x_API::setPacketType(modem);
 }
 
 void SX126x::setFrequency(uint32_t frequency)

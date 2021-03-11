@@ -107,7 +107,7 @@ void settingFunction() {
   Serial.println("Going to standby mode");
   Api.setStandby(SX126X_STANDBY_RC);
   Serial.println("Set packet type to LoRa");
-  Api.setPacketType(SX126X_PACKET_TYPE_LORA);
+  Api.setPacketType(SX126X_LORA_MODEM);
 
   // Set frequency to selected frequency (rfFrequency = rfFreq * 32000000 / 2 ^ 25)
   Serial.print("Set frequency to ");
@@ -156,14 +156,25 @@ uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
   // Attach irqPin to DIO1
   Serial.println("Attach interrupt on pin 2 (irqPin)");
   attachInterrupt(digitalPinToInterrupt(irqPin), checkReceiveDone, RISING);
-  digitalWrite(rxenPin, HIGH);
+  // Set txen and rxen pin state for receiving packet
   digitalWrite(txenPin, LOW);
+  digitalWrite(rxenPin, HIGH);
 
   // Wait for RX done interrupt
   Serial.println("Wait for RX done interrupt");
   while (!received) delayMicroseconds(4);
   // Clear transmit interrupt flag
   received = false;
+
+  // Clear the interrupt status
+  uint16_t irqStat;
+  Api.getIrqStatus(&irqStat);
+  Serial.println("Clear IRQ status");
+  Api.clearIrqStatus(irqStat);
+  digitalWrite(rxenPin, LOW);
+
+  // Exit function if timeout reached
+  if (irqStat & SX126X_IRQ_TIMEOUT) return irqStat;
   Serial.println("Packet received!");
 
   // Get last received length and buffer base address
@@ -185,13 +196,6 @@ uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
   Serial.print(snr);
   Serial.print(" | signalRSSI = ");
   Serial.println(signalRssi);
-
-  // Clear the interrupt status
-  uint16_t irqStat;
-  Api.getIrqStatus(&irqStat);
-  Serial.println("Clear IRQ status");
-  Api.clearIrqStatus(irqStat);
-  digitalWrite(txenPin, LOW);
 
   // Read message from buffer
   Serial.println("Read message from buffer");

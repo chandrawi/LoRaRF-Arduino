@@ -124,8 +124,8 @@
 #define SX126X_RF_FREQUENCY_NOM                       ‭33554432‬    // used for RF frequency calculation
 
 // SetPacketType
-#define SX126X_PACKET_TYPE_FSK                        0x00        // GFSK packet type
-#define SX126X_PACKET_TYPE_LORA                       0x01        // LoRa packet type
+#define SX126X_FSK_MODEM                              0x00        // GFSK packet type
+#define SX126X_LORA_MODEM                             0x01        // LoRa packet type
 
 // SetTxParams
 #define SX126X_PA_RAMP_10U                            0x00        // ramp time: 10 us
