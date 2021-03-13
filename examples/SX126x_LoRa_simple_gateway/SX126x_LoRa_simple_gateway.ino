@@ -3,15 +3,15 @@
 SX126x LoRa;
 
 // gateway ID
-uint8_t deviceId = 0xCC;
+uint8_t gatewayId = 0xCC;
 
 // Message structure to transmit
 struct dataObject {
-  uint8_t deviceId;
-  uint8_t destinationId;
-  uint32_t time;
-  uint16_t data;
+  uint8_t gatewayId;
+  uint8_t nodeId;
   uint16_t messageId;
+  uint32_t time;
+  int32_t data;
 };
 dataObject message;
 uint8_t messageLen = sizeof(dataObject);
@@ -73,19 +73,19 @@ void setup() {
   LoRa.setLoRaSyncWord(0x1424);
 
   Serial.print("\nGateway ID : 0x");
-  if (deviceId < 0x10) Serial.print("0");
-  Serial.println(deviceId, HEX);
-  Serial.println("-- LoRa GATEWAY --\n");
+  if (gatewayId < 0x10) Serial.print("0");
+  Serial.println(gatewayId, HEX);
+  Serial.println("-- LoRa Gateway --\n");
   
 }
 
 void loop() {
 
-  // Set RF module to listen mode with 20 ms RX mode and 10 ms sleep
+  // Set RF module to listen mode with 30 ms RX mode and 10 ms sleep
   // Some LoRa packet will not be received if sleep period too long or preamble length too short
-  uint32_t rxPeriod = 20;
-  uint32_t sleepPeriod = 10;
-  LoRa.listen(rxPeriod, sleepPeriod);
+   uint32_t rxPeriod = 30;
+   uint32_t sleepPeriod = 10;
+   LoRa.listen(rxPeriod, sleepPeriod);
 
   // Wait until modulation process for receiving packet finish
   LoRa.wait();
@@ -94,31 +94,32 @@ void loop() {
   LoRa.get(message);
 
   // Print received message in serial only if gateway ID is match
-  if (message.deviceId == deviceId){
-    Serial.print("Node ID      : 0x");
-    if (message.destinationId < 0x10) Serial.print("0");
-    Serial.println(message.destinationId, HEX);
-    Serial.print("Time         : ");
-    Serial.println(message.time);
-    Serial.print("Data         : ");
-    Serial.println(message.data);
-    Serial.print("Message ID   : ");
+  if (message.gatewayId == gatewayId){
+    Serial.print("Gateway ID    : 0x");
+    if (message.gatewayId < 0x10) Serial.print("0");
+    Serial.println(message.gatewayId, HEX);
+    Serial.print("Node ID       : 0x");
+    if (message.nodeId < 0x10) Serial.print("0");
+    Serial.println(message.nodeId, HEX);
+    Serial.print("Message ID    : ");
     Serial.println(message.messageId);
+    Serial.print("Time          : ");
+    Serial.println(message.time);
+    Serial.print("Data          : ");
+    Serial.println(message.data);
   }
   else {
     Serial.print("Received message with wrong gateway ID (0x");
-    if (message.deviceId < 0x10) Serial.print("0");
-    Serial.print(message.deviceId, HEX);
+    if (message.gatewayId < 0x10) Serial.print("0");
+    Serial.print(message.gatewayId, HEX);
     Serial.println(")");
   }
 
-  // Print packet/signal status including RSSI, SNR, and signalRSSI
-  Serial.print("Packet status: RSSI = ");
+  // Print packet/signal status including RSSI and SNR
+  Serial.print("Packet status : RSSI = ");
   Serial.print(LoRa.rssi());
   Serial.print(" dBm | SNR = ");
   Serial.print(LoRa.snr());
-  Serial.print(" dB | signalRSSI = ");
-  Serial.print(LoRa.signalRssi());
   Serial.println(" dB");
 	
   // Show received status in case CRC or header error occur

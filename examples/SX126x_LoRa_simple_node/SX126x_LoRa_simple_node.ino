@@ -3,16 +3,16 @@
 SX126x LoRa;
 
 // gateway ID and node ID
-uint8_t deviceId = 0xCC;
-uint8_t destinationId = 0x77;
+uint8_t gatewayId = 0xCC;
+uint8_t nodeId = 0x77;
 
 // Message structure to transmit
 struct dataObject {
-  uint8_t deviceId;
-  uint8_t destinationId;
-  uint32_t time;
-  uint16_t data;
+  uint8_t gatewayId;
+  uint8_t nodeId;
   uint16_t messageId;
+  uint32_t time;
+  int32_t data;
 };
 dataObject message;
 uint8_t messageLen = sizeof(dataObject);
@@ -74,19 +74,19 @@ void setup() {
   Serial.println("Set syncronize word to 0x1424");
   LoRa.setLoRaSyncWord(0x1424);
 
-  Serial.println("\n-- LoRa NODE --\n");
+  Serial.println("\n-- LoRa Node --\n");
   
   // Assign gateway Id and node Id to message object
-  message.deviceId = deviceId;
-  message.destinationId = destinationId;
+  message.gatewayId = gatewayId;
+  message.nodeId = nodeId;
   message.messageId = 0;
 
 }
 
 void loop() {
 
-  // Assign data with value of analog read A0 and time with current time
-  message.data = analogRead(A0);
+  // Assign data with random value and time with current time
+  message.data = random(-1073741824, 1073741824);
   message.time = millis();
   message.messageId++;
   
@@ -98,25 +98,24 @@ void loop() {
   LoRa.endPacket(timeout);
 
   // Print message in serial
-  Serial.print("Gateway ID   : 0x");
-  if (message.deviceId < 0x10) Serial.print("0");
-  Serial.println(message.deviceId, HEX);
-  Serial.print("Node ID      : 0x");
-  if (message.destinationId < 0x10) Serial.print("0");
-  Serial.println(message.destinationId, HEX);
-  Serial.print("Time         : ");
-  Serial.println(message.time);
-  Serial.print("Data         : ");
-  Serial.println(message.data);
-  Serial.print("Message ID   : ");
+  Serial.print("Gateway ID    : 0x");
+  if (message.gatewayId < 0x10) Serial.print("0");
+  Serial.println(message.gatewayId, HEX);
+  Serial.print("Node ID       : 0x");
+  if (message.nodeId < 0x10) Serial.print("0");
+  Serial.println(message.nodeId, HEX);
+  Serial.print("Message ID    : ");
   Serial.println(message.messageId);
+  Serial.print("Time          : ");
+  Serial.println(message.time);
+  Serial.print("Data          : ");
+  Serial.println(message.data);
 
   // Wait until modulation process for transmitting packet finish
   LoRa.wait();
 
   // Print transmit time
-  // Transmit time show the actual modulation time for transmitting LoRa packet
-  Serial.print("Transmit time: ");
+  Serial.print("Transmit time : ");
   Serial.print(LoRa.transmitTime());
   Serial.println(" ms");
   Serial.println();
