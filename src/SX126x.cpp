@@ -172,7 +172,7 @@ void SX126x::setFrequency(uint32_t frequency)
     calFreq[0] = 0xE1;
     calFreq[1] = 0xE9;
     }
-    uint32_t rfFreq = frequency * 33554432UL / 32000000UL;
+    uint32_t rfFreq = ((uint64_t) frequency << SX126X_RF_FREQUENCY_SHIFT) / SX126X_RF_FREQUENCY_XTAL;
 
     SX126x_API::calibrateImage(calFreq[0], calFreq[1]);
     SX126x_API::setRfFrequency(rfFreq);

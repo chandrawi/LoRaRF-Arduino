@@ -121,7 +121,7 @@
 
 // SetRfFrequency
 #define SX126X_RF_FREQUENCY_XTAL                      32000000    // XTAL frequency used for RF frequency calculation
-#define SX126X_RF_FREQUENCY_NOM                       ‭33554432‬    // used for RF frequency calculation
+#define SX126X_RF_FREQUENCY_SHIFT                     25          // RfFreq = Frequency * 2^25 / 32000000
 
 // SetPacketType
 #define SX126X_FSK_MODEM                              0x00        // GFSK packet type
