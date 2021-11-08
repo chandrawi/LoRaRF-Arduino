@@ -114,7 +114,7 @@ class SX126x : public BaseLoRa
         }
 
         uint8_t status();
-        void wait();
+        void wait(uint32_t timeout=0);
         uint32_t transmitTime();
         float dataRate();
         float rssi();
@@ -145,7 +145,7 @@ class SX126x : public BaseLoRa
         static int8_t _pinToLow;
 
         void _irqSetup(uint16_t irqMask);
-        uint16_t _waitIrq();
+        uint16_t _waitIrq(uint32_t timeout);
         static void _interruptTx();
         static void _interruptRx();
         uint8_t _getStatusInterrupt();

@@ -113,7 +113,7 @@ void settingFunction() {
   Serial.print("Set frequency to ");
   Serial.print(rfFrequency / 1000000);
   Serial.println(" Mhz");
-  uint32_t rfFreq = rfFrequency * 33554432UL / 32000000UL;
+  uint32_t rfFreq = ((uint64_t) rfFrequency * 33554432UL) / 32000000UL;
   Api.setRfFrequency(rfFreq);
 
   // Set rx gain to selected gain

@@ -352,7 +352,7 @@ void SX126x::endPacket(uint32_t timeout)
         attachInterrupt(_irq, SX126x::_interruptTx, RISING);
     }
     else {
-        uint16_t irqStat = _waitIrq();
+        uint16_t irqStat = _waitIrq(timeout);
         
         _transmitTime = micros() - _transmitTime;
         
@@ -411,7 +411,7 @@ void SX126x::request(uint32_t timeout)
         attachInterrupt(_irq, SX126x::_interruptRx, RISING);
     }
     else {
-        uint16_t irqStat = _waitIrq();
+        uint16_t irqStat = _waitIrq(timeout);
         
         SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
         
@@ -431,6 +431,7 @@ void SX126x::listen(uint32_t rxPeriod, uint32_t sleepPeriod)
     _irqSetup(SX126X_IRQ_RX_DONE | SX126X_IRQ_TIMEOUT | SX126X_IRQ_HEADER_ERR | SX126X_IRQ_CRC_ERR);
     
     _status = SX126X_STATUS_RX_WAIT;
+    uint32_t timeout = rxPeriod;
     rxPeriod = rxPeriod << 6;
     sleepPeriod = sleepPeriod << 6;
     if (rxPeriod > 0x00FFFFFF) rxPeriod = 0x00FFFFFF;
@@ -449,7 +450,7 @@ void SX126x::listen(uint32_t rxPeriod, uint32_t sleepPeriod)
         attachInterrupt(_irq, SX126x::_interruptRx, RISING);
     }
     else {
-        uint16_t irqStat = _waitIrq();
+        uint16_t irqStat = _waitIrq(timeout);
         
         SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
         
@@ -512,11 +513,12 @@ uint8_t SX126x::status()
     else return _getStatusInterrupt();
 }
 
-void SX126x::wait()
+void SX126x::wait(uint32_t timeout)
 {
     if (_irq == -1) return;
+    uint32_t t = millis();
     while (_getStatusInterrupt() == _status){
-        if (_statusInterrupt != 0b00000000) break;
+        if (_statusInterrupt != 0b00000000 || (millis() - t > timeout && timeout != 0)) break;
     }
     if (_status == SX126X_STATUS_RX_CONTINUOUS_WAIT){
         _statusRxContinuous = _getStatusInterrupt();
@@ -585,10 +587,14 @@ void SX126x::_irqSetup(uint16_t irqMask)
     SX126x_API::setDioIrqParams(irqMask, dio1Mask, dio2Mask, dio3Mask);
 }
 
-uint16_t SX126x::_waitIrq()
+uint16_t SX126x::_waitIrq(uint32_t timeout)
 {
     uint16_t irqStat = 0x0000;
-    while (irqStat == 0x0000) SX126x_API::getIrqStatus(&irqStat);
+    uint32_t t = millis();
+    while (irqStat == 0x0000) {
+        SX126x_API::getIrqStatus(&irqStat);
+        if (millis() - t > timeout && timeout != 0) break;
+    }
     return irqStat;
 }
 
