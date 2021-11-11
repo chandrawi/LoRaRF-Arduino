@@ -1,6 +1,6 @@
 #include <SX126x.h>
 
-uint8_t SX126x::_statusInterrupt = 0b00000000;
+uint8_t SX126x::_statusInterrupt = 0b11111111;
 
 uint8_t SX126x::_bufferIndex = 0;
 
@@ -26,7 +26,7 @@ bool SX126x::begin(int8_t nss, int8_t reset, int8_t busy, int8_t irq, int8_t txe
     setPins(nss, reset, busy, irq, txen, rxen);
     _spi->begin();
     
-    SX126x_API::reset(reset, busy);
+    SX126x_API::reset(reset);
     SX126x_API::setStandby(SX126X_STANDBY_RC);
     if (getMode() != SX126X_STATUS_MODE_STDBY_RC) return false;
     SX126x_API::setPacketType(SX126X_LORA_MODEM);
@@ -41,9 +41,9 @@ void SX126x::end()
     _spi->end();
 }
 
-void SX126x::reset()
+bool SX126x::reset()
 {
-    SX126x_API::reset(_reset, _busy);
+    return SX126x_API::reset(_reset);
 }
 
 void SX126x::sleep(uint8_t option)
@@ -68,6 +68,11 @@ void SX126x::standby(uint8_t option)
 void SX126x::setActive()
 {
     SX126x_API::usePins(_nss, _busy);
+}
+
+bool SX126x::busyCheck(uint32_t timeout)
+{
+    return SX126x_API::busyCheck(timeout);
 }
 
 void SX126x::setFallbackMode(uint8_t fallbackMode)
@@ -517,8 +522,8 @@ void SX126x::wait(uint32_t timeout)
 {
     if (_irq == -1) return;
     uint32_t t = millis();
-    while (_getStatusInterrupt() == _status){
-        if (_statusInterrupt != 0b00000000 || (millis() - t > timeout && timeout != 0)) break;
+    while (_statusInterrupt == 0b00000000){
+        if (millis() - t > timeout && timeout != 0) break;
     }
     if (_status == SX126X_STATUS_RX_CONTINUOUS_WAIT){
         _statusRxContinuous = _getStatusInterrupt();

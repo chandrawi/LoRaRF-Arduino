@@ -37,11 +37,12 @@ class SX126x : public BaseLoRa
         bool begin();
         bool begin(int8_t nss, int8_t reset, int8_t busy, int8_t irq=-1, int8_t txen=-1, int8_t rxen=-1);
         void end();
-        void reset();
+        bool reset();
         void sleep(uint8_t option=SX126X_SLEEP_WARM_START);
         void wake();
         void standby(uint8_t option=SX126X_STANDBY_RC);
         void setActive();
+        bool busyCheck(uint32_t timeout=SX126X_BUSY_TIMEOUT);
         void setFallbackMode(uint8_t fallbackMode);
         uint8_t getMode();
 

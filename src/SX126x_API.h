@@ -265,6 +265,7 @@
 #define SX126X_PIN_BUSY                               5
 #define SX126X_SPI                                    SPI
 #define SX126X_SPI_FREQUENCY                          4000000
+#define SX126X_BUSY_TIMEOUT                           5000        // Default timeout for checking busy pin
 
 class SX126x_API
 {
@@ -274,8 +275,9 @@ class SX126x_API
         static void setSPI(SPIClass &SpiObject);
         static void setPins(int8_t nss, int8_t reset, int8_t busy);
         static void usePins(int8_t nss, int8_t busy);
-        static void reset(int8_t reset=_reset, int8_t busy=_busy);
+        static bool reset(int8_t reset=_reset);
         static void begin();
+        static bool busyCheck(uint32_t timeout=SX126X_BUSY_TIMEOUT);
 
         // SX126x API: Operational Modes Commands
         static void setSleep(uint8_t sleepConfig);

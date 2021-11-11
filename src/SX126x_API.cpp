@@ -29,17 +29,24 @@ void SX126x_API::usePins(int8_t nss, int8_t busy)
     _busy = busy;
 }
 
-void SX126x_API::reset(int8_t reset, int8_t busy)
+bool SX126x_API::reset(int8_t reset)
 {
     digitalWrite(reset, LOW);
     delay(1);
     digitalWrite(reset, HIGH);
-    while (digitalRead(busy) == HIGH);
+    return !SX126x_API::busyCheck();
 }
 
 void SX126x_API::begin()
 {
     _spi->begin();
+}
+
+bool SX126x_API::busyCheck(uint32_t timeout)
+{
+    uint32_t t = millis();
+    while (digitalRead(_busy) == HIGH) if (millis() - t > timeout) return true;
+    return false;
 }
 
 void SX126x_API::setSleep(uint8_t sleepConfig)
@@ -462,7 +469,7 @@ void SX126x_API::fixInvertedIq(uint8_t invertIq)
 
 void SX126x_API::_writeBytes(uint8_t opCode, uint8_t* data, uint8_t nBytes)
 {
-    while (digitalRead(_busy) == HIGH);
+    if (SX126x_API::busyCheck()) return;
     
     digitalWrite(_nss, LOW);
     _spi->beginTransaction(SPISettings(SX126X_SPI_FREQUENCY, MSBFIRST, SPI_MODE0));
@@ -474,7 +481,7 @@ void SX126x_API::_writeBytes(uint8_t opCode, uint8_t* data, uint8_t nBytes)
 
 void SX126x_API::_readBytes(uint8_t opCode, uint8_t* data, uint8_t nBytes, uint8_t* address, uint8_t nAddress)
 {
-    while (digitalRead(_busy) == HIGH);
+    if (SX126x_API::busyCheck()) return;
     
     digitalWrite(_nss, LOW);
     _spi->beginTransaction(SPISettings(SX126X_SPI_FREQUENCY, MSBFIRST, SPI_MODE0));

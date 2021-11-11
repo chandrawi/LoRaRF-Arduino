@@ -16,6 +16,7 @@ sleep	KEYWORD2
 wake	KEYWORD2
 standby	KEYWORD2
 setActive	KEYWORD2
+busyCheck	KEYWORD2
 setFallbackMode	KEYWORD2
 getMode	KEYWORD2
 setPins	KEYWORD2
