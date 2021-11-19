@@ -19,6 +19,7 @@ setActive	KEYWORD2
 busyCheck	KEYWORD2
 setFallbackMode	KEYWORD2
 getMode	KEYWORD2
+setSPI	KEYWORD2
 setPins	KEYWORD2
 setRfIrqPin	KEYWORD2
 setDio2RfSwitch	KEYWORD2
@@ -40,8 +41,8 @@ setFskSyncWord	KEYWORD2
 setFskAdress	KEYWORD2
 setFskCrc	KEYWORD2
 setFskWhitening	KEYWORD2
-beginTransmission	KEYWORD2
-endTransmission	KEYWORD2
+beginPacket	KEYWORD2
+endPacket	KEYWORD2
 write	KEYWORD2
 request	KEYWORD2
 listen	KEYWORD2
