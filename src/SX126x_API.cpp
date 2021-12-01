@@ -2,28 +2,19 @@
 
 SPIClass* SX126x_API::_spi = &SX126X_SPI;
 
-int8_t SX126x_API::_nss = SX126X_PIN_NSS;
+uint32_t SX126x_API::_spiFrequency = SX126X_SPI_FREQUENCY;
 
-int8_t SX126x_API::_reset = SX126X_PIN_RESET;
+int8_t SX126x_API::_nss = SX126X_PIN_NSS;
 
 int8_t SX126x_API::_busy = SX126X_PIN_BUSY;
 
-void SX126x_API::setSPI(SPIClass &SpiObject)
+void SX126x_API::setSPI(SPIClass &SpiObject, uint32_t frequency)
 {
     _spi = &SpiObject;
+    _spiFrequency = frequency ? frequency : _spiFrequency;
 }
 
-void SX126x_API::setPins(int8_t nss, int8_t reset, int8_t busy)
-{
-    _nss = nss;
-    _reset = reset;
-    _busy = busy;
-    pinMode(_nss, OUTPUT);
-    pinMode(_reset, OUTPUT);
-    pinMode(_busy, INPUT);
-}
-
-void SX126x_API::usePins(int8_t nss, int8_t busy)
+void SX126x_API::setPins(int8_t nss, int8_t busy)
 {
     _nss = nss;
     _busy = busy;
@@ -31,14 +22,16 @@ void SX126x_API::usePins(int8_t nss, int8_t busy)
 
 bool SX126x_API::reset(int8_t reset)
 {
+    pinMode(reset, OUTPUT);
     digitalWrite(reset, LOW);
     delay(1);
     digitalWrite(reset, HIGH);
-    return !SX126x_API::busyCheck();
 }
 
 void SX126x_API::begin()
 {
+    pinMode(_nss, OUTPUT);
+    pinMode(_busy, INPUT);
     _spi->begin();
 }
 
@@ -51,14 +44,11 @@ bool SX126x_API::busyCheck(uint32_t timeout)
 
 void SX126x_API::setSleep(uint8_t sleepConfig)
 {
-    if (sleepConfig > 0x07) return;
-    if (sleepConfig & 0x02) return;
     _writeBytes(0x84, &sleepConfig, 1);
 }
 
 void SX126x_API::setStandby(uint8_t standbyConfig)
 {
-    if (standbyConfig > 0x01) return;
     _writeBytes(0x80, &standbyConfig, 1);
 }
 
@@ -70,36 +60,35 @@ void SX126x_API::setFs()
 void SX126x_API::setTx(uint32_t timeout)
 {
     uint8_t buf[3];
-    buf[0] = (timeout >> 16) & 0xFF;
-    buf[1] = (timeout >> 8) & 0xFF;
-    buf[2] = timeout & 0xFF;
+    buf[0] = timeout >> 16;
+    buf[1] = timeout >> 8;
+    buf[2] = timeout;
     _writeBytes(0x83, buf, 3);
 }
 
 void SX126x_API::setRx(uint32_t timeout)
 {
     uint8_t buf[3];
-    buf[0] = (timeout >> 16) & 0xFF;
-    buf[1] = (timeout >> 8) & 0xFF;
-    buf[2] = timeout & 0xFF;
+    buf[0] = timeout >> 16;
+    buf[1] = timeout >> 8;
+    buf[2] = timeout;
     _writeBytes(0x82, buf, 3);
 }
 
 void SX126x_API::stopTimerOnPreamble(uint8_t enable)
 {
-    if (enable > 0x01) return;
     _writeBytes(0x9F, &enable, 1);
 }
 
 void SX126x_API::setRxDutyCycle(uint32_t rxPeriod, uint32_t sleepPeriod)
 {
     uint8_t buf[6];
-    buf[0] = (rxPeriod >> 16) & 0xFF;
-    buf[1] = (rxPeriod >> 8) & 0xFF;
-    buf[2] = rxPeriod & 0xFF;
-    buf[3] = (sleepPeriod >> 16) & 0xFF;
-    buf[4] = (sleepPeriod >> 8) & 0xFF;
-    buf[5] = sleepPeriod & 0xFF;
+    buf[0] = rxPeriod >> 16;
+    buf[1] = rxPeriod >> 8;
+    buf[2] = rxPeriod;
+    buf[3] = sleepPeriod >> 16;
+    buf[4] = sleepPeriod >> 8;
+    buf[5] = sleepPeriod;
     _writeBytes(0x94, buf, 6);
 }
 
@@ -120,13 +109,11 @@ void SX126x_API::setTxInfinitePreamble()
 
 void SX126x_API::setRegulatorMode(uint8_t modeParam)
 {
-    if (modeParam > 0x01) return;
     _writeBytes(0x96, &modeParam, 1);
 }
 
 void SX126x_API::calibrate(uint8_t calibParam)
 {
-    if (calibParam > 0x7F) return;
     _writeBytes(0x89, &calibParam, 1);
 }
 
@@ -140,11 +127,6 @@ void SX126x_API::calibrateImage(uint8_t freq1, uint8_t freq2)
 
 void SX126x_API::setPaConfig(uint8_t paDutyCycle, uint8_t hpMax, uint8_t deviceSel, uint8_t paLut)
 {
-    if (deviceSel > 0x01) return;
-    if (paLut != 0x01) return;
-    if (hpMax > 0x07) return;
-    if (paDutyCycle > 0x07) return;
-    if ((deviceSel == 0x00) && (paDutyCycle > 0x04)) return;
     uint8_t buf[4];
     buf[0] = paDutyCycle;
     buf[1] = hpMax;
@@ -155,7 +137,6 @@ void SX126x_API::setPaConfig(uint8_t paDutyCycle, uint8_t hpMax, uint8_t deviceS
 
 void SX126x_API::setRxTxFallbackMode(uint8_t fallbackMode)
 {
-    if ((fallbackMode != 0x40) && (fallbackMode != 0x30) && (fallbackMode != 0x20)) return;
     _writeBytes(0x93, &fallbackMode, 1);
 }
 
@@ -164,7 +145,7 @@ void SX126x_API::writeRegister(uint16_t address, uint8_t* data, uint8_t nData)
     uint8_t nBuf = nData + 2;
     uint8_t buf[nBuf];
     buf[0] = address >> 8;
-    buf[1] = address & 0xFF;
+    buf[1] = address;
     for(uint8_t i=0; i<nData; i++) buf[i + 2] = data[i];
     _writeBytes(0x0D, buf, nBuf);
 }
@@ -175,7 +156,7 @@ void SX126x_API::readRegister(uint16_t address, uint8_t* data, uint8_t nData)
     uint8_t buf[nBuf];
     uint8_t addr[2];
     addr[0] = address >> 8;
-    addr[1] = address & 0xFF;
+    addr[1] = address;
     _readBytes(0x1D, buf, nBuf, addr, 2);
     for(uint8_t i=0; i<nData; i++) data[i] = buf[i + 1];
 }
@@ -201,13 +182,13 @@ void SX126x_API::setDioIrqParams(uint16_t irqMask, uint16_t dio1Mask, uint16_t d
 {
     uint8_t buf[8];
     buf[0] = irqMask >> 8;
-    buf[1] = irqMask & 0xFF;
+    buf[1] = irqMask;
     buf[2] = dio1Mask >> 8;
-    buf[3] = dio1Mask & 0xFF;
+    buf[3] = dio1Mask;
     buf[4] = dio2Mask >> 8;
-    buf[5] = dio2Mask & 0xFF;
+    buf[5] = dio2Mask;
     buf[6] = dio3Mask >> 8;
-    buf[7] = dio3Mask & 0xFF;
+    buf[7] = dio3Mask;
     _writeBytes(0x08, buf, 8);
 }
 
@@ -222,41 +203,37 @@ void SX126x_API::clearIrqStatus(uint16_t clearIrqParam)
 {
     uint8_t buf[2];
     buf[0] = clearIrqParam >> 8;
-    buf[1] = clearIrqParam & 0xFF;
+    buf[1] = clearIrqParam;
     _writeBytes(0x02, buf, 2);
 }
 
 void SX126x_API::setDio2AsRfSwitchCtrl(uint8_t enable)
 {
-    if (enable > 0x01) return;
     _writeBytes(0x9D, &enable, 1);
 }
 
 void SX126x_API::setDio3AsTcxoCtrl(uint8_t tcxoVoltage, uint32_t delay)
 {
-    if (tcxoVoltage > 0x07) return;
     uint8_t buf[4];
     buf[0] = tcxoVoltage;
-    buf[1] = (delay >> 16) & 0xFF;
-    buf[2] = (delay >> 8) & 0xFF;
-    buf[3] = delay & 0xFF;
+    buf[1] = delay >> 16;
+    buf[2] = delay >> 8;
+    buf[3] = delay;
     _writeBytes(0x97, buf, 4);
 }
 
 void SX126x_API::setRfFrequency(uint32_t rfFreq)
 {
-    if ((rfFreq < 134217728) || (rfFreq > 1073741824)) return; // range 128 Mhz - 1024 Mhz
     uint8_t buf[4];
-    buf[0] = (rfFreq >> 24) & 0xFF;
-    buf[1] = (rfFreq >> 16) & 0xFF;
-    buf[2] = (rfFreq >> 8) & 0xFF;
-    buf[3] = rfFreq & 0xFF;
+    buf[0] = rfFreq >> 24;
+    buf[1] = rfFreq >> 16;
+    buf[2] = rfFreq >> 8;
+    buf[3] = rfFreq;
     _writeBytes(0x86, buf, 4);
 }
 
 void SX126x_API::setPacketType(uint8_t packetType)
 {
-    if (packetType > 0x01) return;
     _writeBytes(0x8A, &packetType, 1);
 }
 
@@ -282,10 +259,6 @@ void SX126x_API::setModulationParams(uint8_t* modulationParams)
 
 void SX126x_API::setModulationParamsLoRa(uint8_t sf, uint8_t bw, uint8_t cr, uint8_t ldro)
 {
-    if ((sf < 0x05) || (sf > 0x0C)) return;
-    if (bw > 0x0A) return;
-    if (cr > 0x04) return;
-    if (ldro > 0x01) return;
     uint8_t buf[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     buf[0] = sf;
     buf[1] = bw;
@@ -297,14 +270,14 @@ void SX126x_API::setModulationParamsLoRa(uint8_t sf, uint8_t bw, uint8_t cr, uin
 void SX126x_API::setModulationParamsFSK(uint32_t br, uint8_t pulseShape, uint8_t bandwidth, uint32_t Fdev)
 {
     uint8_t buf[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    buf[0] = (br >> 16) & 0xFF;
-    buf[1] = (br >> 8) & 0xFF;
-    buf[2] = br & 0xFF;
+    buf[0] = br >> 16;
+    buf[1] = br >> 8;
+    buf[2] = br;
     buf[3] = pulseShape;
     buf[4] = bandwidth;
-    buf[5] = (Fdev >> 16) & 0xFF;
-    buf[6] = (Fdev >> 8) & 0xFF;
-    buf[7] = Fdev & 0xFF;
+    buf[5] = Fdev >> 16;
+    buf[6] = Fdev >> 8;
+    buf[7] = Fdev;
     _writeBytes(0x8B, buf, 8);
 }
 void SX126x_API::setPacketParams(uint8_t* packetParams)
@@ -314,13 +287,9 @@ void SX126x_API::setPacketParams(uint8_t* packetParams)
 
 void SX126x_API::setPacketParamsLoRa(uint16_t preambleLength, uint8_t headerType, uint8_t payloadLength, uint8_t crcType, uint8_t invertIq)
 {
-    if (preambleLength == 0x00) return;
-    if (headerType > 0x01) return;
-    if (crcType > 0x01) return;
-    if (invertIq > 0x01) return;
     uint8_t buf[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     buf[0] = preambleLength >> 8;
-    buf[1] = preambleLength & 0xFF;
+    buf[1] = preambleLength;
     buf[2] = headerType;
     buf[3] = payloadLength;
     buf[4] = crcType;
@@ -332,7 +301,7 @@ void SX126x_API::setPacketParamsFSK(uint16_t preambleLength, uint8_t preambleDet
 {
     uint8_t buf[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     buf[0] = preambleLength >> 8;
-    buf[1] = preambleLength & 0xFF;
+    buf[1] = preambleLength;
     buf[2] = preambleDetector;
     buf[3] = syncWordLength;
     buf[4] = addrComp;
@@ -345,16 +314,14 @@ void SX126x_API::setPacketParamsFSK(uint16_t preambleLength, uint8_t preambleDet
 
 void SX126x_API::setCadParams(uint8_t cadSymbolNum, uint8_t cadDetPeak, uint8_t cadDetMin, uint8_t cadExitMode, uint32_t cadTimeout)
 {
-    if (cadSymbolNum > 0x04) return;
-    if (cadExitMode > 0x01) return;
     uint8_t buf[7];
     buf[0] = cadSymbolNum;
     buf[1] = cadDetPeak;
     buf[2] = cadDetMin;
     buf[3] = cadExitMode;
-    buf[4] = (cadTimeout >> 16) & 0xFF;
-    buf[5] = (cadTimeout >> 8) & 0xFF;
-    buf[6] = cadTimeout & 0xFF;
+    buf[4] = cadTimeout >> 16;
+    buf[5] = cadTimeout >> 8;
+    buf[6] = cadTimeout;
     _writeBytes(0x88, buf, 7);
 }
 

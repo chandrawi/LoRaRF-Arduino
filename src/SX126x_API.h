@@ -272,10 +272,9 @@ class SX126x_API
 
     public:
 
-        static void setSPI(SPIClass &SpiObject);
-        static void setPins(int8_t nss, int8_t reset, int8_t busy);
-        static void usePins(int8_t nss, int8_t busy);
-        static bool reset(int8_t reset=_reset);
+        static void setSPI(SPIClass &SpiObject, uint32_t frequency);
+        static void setPins(int8_t nss, int8_t busy);
+        static bool reset(int8_t reset);
         static void begin();
         static bool busyCheck(uint32_t timeout=SX126X_BUSY_TIMEOUT);
 
@@ -343,8 +342,8 @@ class SX126x_API
     private:
 
         static SPIClass* _spi;
+        static uint32_t _spiFrequency;
         static int8_t _nss;
-        static int8_t _reset;
         static int8_t _busy;
 
         // Utilities

@@ -21,7 +21,6 @@
 
 // Default Hardware Configuration
 #define SX126X_PIN_RF_IRQ                             1
-#define SX126X_PIN_IRQ                                -1
 
 #ifdef USE_LORA_SX126X
 class SX126x
@@ -34,6 +33,7 @@ class SX126x : public BaseLoRa
 
         SX126x();
 
+        // Common methods
         bool begin();
         bool begin(int8_t nss, int8_t reset, int8_t busy, int8_t irq=-1, int8_t txen=-1, int8_t rxen=-1);
         void end();
@@ -46,7 +46,8 @@ class SX126x : public BaseLoRa
         void setFallbackMode(uint8_t fallbackMode);
         uint8_t getMode();
 
-        void setSPI(SPIClass &SpiObject);
+        // Hardware configuration methods
+        void setSPI(SPIClass &SpiObject, uint32_t frequency=SX126X_SPI_FREQUENCY);
         void setPins(int8_t nss, int8_t reset, int8_t busy, int8_t irq=-1, int8_t txen=-1, int8_t rxen=-1);
         void setRfIrqPin(int8_t dioPinSelect);
         void setDio2RfSwitch(bool enable=true);
@@ -55,6 +56,7 @@ class SX126x : public BaseLoRa
         void setRegulator(uint8_t regMode);
         void setCurrentProtection(uint8_t level);
 
+        // Modem, modulation parameter, and packet parameter setup methods
         void setModem(uint8_t modem=SX126X_LORA_MODEM);
         void setFrequency(uint32_t frequency);
         void setTxPower(uint32_t txPower);
@@ -70,6 +72,7 @@ class SX126x : public BaseLoRa
         void setFskCrc(uint16_t crcInit, uint16_t crcPolynom);
         void setFskWhitening(uint16_t whitening);
 
+        // Transmit related methods
         void beginPacket();
         void endPacket(uint32_t timeout=SX126X_TX_MODE_SINGLE);
         void write(uint8_t data);
@@ -89,6 +92,7 @@ class SX126x : public BaseLoRa
             _payloadTxRx += length;
         }
 
+        // Receive related methods
         void request(uint32_t timeout=SX126X_RX_MODE_SINGLE);
         void listen(uint32_t rxPeriod, uint32_t sleepPeriod);
         uint8_t available();
@@ -98,7 +102,6 @@ class SX126x : public BaseLoRa
         void flush();
         template <typename T> uint8_t get(T &data)
         {
-            available();
             const uint8_t length = sizeof(T);
             union conv{
                 T Data;
@@ -114,6 +117,7 @@ class SX126x : public BaseLoRa
             return len;
         }
 
+        // Wait, operation status, and packet status methods
         uint8_t status();
         void wait(uint32_t timeout=0);
         uint32_t transmitTime();
@@ -126,23 +130,23 @@ class SX126x : public BaseLoRa
 
     protected:
 
-        SPIClass* _spi;
-        int8_t _nss, _reset, _busy;
-        int8_t _irq, _txen, _rxen;
-        int8_t _dio;
         uint8_t _modem;
         uint8_t _sf, _bw, _cr, _ldro;
         uint8_t _headerType, _payloadLength, _crcType, _invertIq;
         uint16_t _preambleLength;
-        static uint8_t _bufferIndex;
-        static uint8_t _payloadTxRx;
 
     private:
 
+        SPIClass* _spi;
+        int8_t _nss, _reset, _busy;
+        int8_t _irq, _txen, _rxen;
+        int8_t _dio;
         uint8_t _status;
         uint8_t _statusRxContinuous;
         static uint8_t _statusInterrupt;
         static uint32_t _transmitTime;
+        static uint8_t _bufferIndex;
+        static uint8_t _payloadTxRx;
         static int8_t _pinToLow;
 
         void _irqSetup(uint16_t irqMask);

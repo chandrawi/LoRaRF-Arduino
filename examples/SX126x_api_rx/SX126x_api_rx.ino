@@ -83,14 +83,11 @@ void settingFunction() {
 
   // Pin setting
   Serial.println("Setting pins");
-  Api.setPins(nssPin, resetPin, busyPin);
-  pinMode(irqPin, INPUT);
-  pinMode(rxenPin, OUTPUT);
-  pinMode(txenPin, OUTPUT);
+  Api.setPins(nssPin, busyPin);
 
   // Reset RF module by setting resetPin to LOW and begin SPI communication
   Serial.println("Resetting RF module");
-  Api.reset();
+  Api.reset(resetPin);
   Api.begin();
 
   // Optionally configure TCXO or XTAL used in RF module

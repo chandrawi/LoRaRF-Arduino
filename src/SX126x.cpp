@@ -14,25 +14,35 @@ SX126x::SX126x()
 {
     _dio = SX126X_PIN_RF_IRQ;
     setSPI(SX126X_SPI);
+    setPins(SX126X_PIN_NSS, SX126X_PIN_RESET, SX126X_PIN_BUSY);
 }
 
 bool SX126x::begin()
 {
-    return begin(SX126X_PIN_NSS, SX126X_PIN_RESET, SX126X_PIN_BUSY, SX126X_PIN_IRQ);
-}
+    // set pins as input or output
+    pinMode(_nss, OUTPUT);
+    pinMode(_busy, INPUT);
+    if (_irq != -1) pinMode(_irq, INPUT);
+    if (_txen != -1) pinMode(_txen, OUTPUT);
+    if (_rxen != -1) pinMode(_rxen, OUTPUT);
 
-bool SX126x::begin(int8_t nss, int8_t reset, int8_t busy, int8_t irq, int8_t txen, int8_t rxen)
-{
-    setPins(nss, reset, busy, irq, txen, rxen);
+    // begin spi and perform device reset
     _spi->begin();
-    
-    SX126x_API::reset(reset);
+    SX126x_API::reset(_reset);
+
+    // check if device connect and set modem to LoRa
     SX126x_API::setStandby(SX126X_STANDBY_RC);
     if (getMode() != SX126X_STATUS_MODE_STDBY_RC) return false;
     SX126x_API::setPacketType(SX126X_LORA_MODEM);
     
     SX126x_API::fixResistanceAntenna();
     return true;
+}
+
+bool SX126x::begin(int8_t nss, int8_t reset, int8_t busy, int8_t irq, int8_t txen, int8_t rxen)
+{
+    setPins(nss, reset, busy, irq, txen, rxen);
+    return begin();
 }
 
 void SX126x::end()
@@ -43,11 +53,14 @@ void SX126x::end()
 
 bool SX126x::reset()
 {
-    return SX126x_API::reset(_reset);
+    // put reset pin to low then wait busy pin to low
+    SX126x_API::reset(_reset);
+    return !SX126x_API::busyCheck();
 }
 
 void SX126x::sleep(uint8_t option)
 {
+    // put device in sleep mode, wait for 500 us to enter sleep mode
     standby();
     SX126x_API::setSleep(option);
     delayMicroseconds(500);
@@ -55,6 +68,7 @@ void SX126x::sleep(uint8_t option)
 
 void SX126x::wake()
 {
+    // wake device by set nss to low and put device in standby mode
     digitalWrite(_nss, LOW);
     standby();
     SX126x_API::fixResistanceAntenna();
@@ -67,7 +81,9 @@ void SX126x::standby(uint8_t option)
 
 void SX126x::setActive()
 {
-    SX126x_API::usePins(_nss, _busy);
+    // override spi, nss, and busy static property in SX126x API with object property
+    SX126x_API::setSPI(*_spi, 0);
+    SX126x_API::setPins(_nss, _busy);
 }
 
 bool SX126x::busyCheck(uint32_t timeout)
@@ -87,26 +103,23 @@ uint8_t SX126x::getMode()
     return mode & 0x70;
 }
 
-void SX126x::setSPI(SPIClass &SpiObject)
+void SX126x::setSPI(SPIClass &SpiObject, uint32_t frequency)
 {
-    SX126x_API::setSPI(SpiObject);
+    SX126x_API::setSPI(SpiObject, frequency);
 
     _spi = &SpiObject;
 }
 
 void SX126x::setPins(int8_t nss, int8_t reset, int8_t busy, int8_t irq, int8_t txen, int8_t rxen)
 {
-    SX126x_API::setPins(nss, reset, busy);
-    
+    SX126x_API::setPins(nss, busy);
+
     _nss = nss;
     _reset = reset;
     _busy = busy;
-    _irq = digitalPinToInterrupt(irq);
+    _irq = irq;
     _txen = txen;
     _rxen = rxen;
-    if (_irq != -1) pinMode(irq, INPUT);
-    if (txen != -1) pinMode(txen, OUTPUT);
-    if (rxen != -1) pinMode(rxen, OUTPUT);
 }
 
 void SX126x::setRfIrqPin(int8_t dioPinSelect)
@@ -157,34 +170,37 @@ void SX126x::setModem(uint8_t modem)
 void SX126x::setFrequency(uint32_t frequency)
 {
     uint8_t calFreq[2];
-    if (frequency < 446000000){
-    calFreq[0] = 0x6B;
-    calFreq[1] = 0x6F;
+    if (frequency < 446000000) {        // 430 - 440 Mhz
+        calFreq[0] = 0x6B;
+        calFreq[1] = 0x6F;
     }
-    else if (frequency < 734000000){
-    calFreq[0] = 0x75;
-    calFreq[1] = 0x81;
+    else if (frequency < 734000000) {   // 470 - 510 Mhz
+        calFreq[0] = 0x75;
+        calFreq[1] = 0x81;
     }
-    else if (frequency < 828000000){
-    calFreq[0] = 0xC1;
-    calFreq[1] = 0xC5;
+    else if (frequency < 828000000) {   // 779 - 787 Mhz
+        calFreq[0] = 0xC1;
+        calFreq[1] = 0xC5;
     }
-    else if (frequency < 877000000){
-    calFreq[0] = 0xD7;
-    calFreq[1] = 0xDB;
+    else if (frequency < 877000000) {   // 863 - 870 Mhz
+        calFreq[0] = 0xD7;
+        calFreq[1] = 0xDB;
     }
-    else if (frequency < 1100000000){
-    calFreq[0] = 0xE1;
-    calFreq[1] = 0xE9;
+    else if (frequency < 1100000000) {  // 902 - 928 Mhz
+        calFreq[0] = 0xE1;
+        calFreq[1] = 0xE9;
     }
+    // calculate frequency for setting configuration
     uint32_t rfFreq = ((uint64_t) frequency << SX126X_RF_FREQUENCY_SHIFT) / SX126X_RF_FREQUENCY_XTAL;
 
+    // perform image calibration before set frequency
     SX126x_API::calibrateImage(calFreq[0], calFreq[1]);
     SX126x_API::setRfFrequency(rfFreq);
 }
 
 void SX126x::setTxPower(uint32_t txPower)
 {
+    // set output power and ramp time option
     uint8_t power, ramp;
     switch (txPower){
         case SX126X_TX_POWER_SX1261_15:
@@ -230,16 +246,19 @@ void SX126x::setTxPower(uint32_t txPower)
     uint8_t deviceSel = txPower & 0xFF;
     uint8_t paLut = 0x01;
 
+    // set power amplifier and TX power configuration
     SX126x_API::setPaConfig(paDutyCycle, hpMax, deviceSel, paLut);
     SX126x_API::setTxParams(power, ramp);
 }
 
 void SX126x::setRxGain(uint8_t rxGain)
 {
+    // set power saving or boosted gain in register
     uint8_t gain = SX126X_RX_GAIN_POWER_SAVING;
     if (rxGain == SX126X_RX_GAIN_BOOSTED){
         gain = SX126X_RX_GAIN_BOOSTED;
         SX126x_API::writeRegister(SX126X_REG_RX_GAIN, &gain, 1);
+        // set certain register to retain configuration after wake from sleep mode
         uint8_t value = 0x01;
         SX126x_API::writeRegister(0x029F, &value, 1);
         value = 0x08;
