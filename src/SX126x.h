@@ -18,6 +18,9 @@
 #define SX126X_STATUS_CAD_WAIT                        LORA_STATUS_CAD_WAIT
 #define SX126X_STATUS_CAD_DETECTED                    LORA_STATUS_CAD_DETECTED
 #define SX126X_STATUS_CAD_DONE                        LORA_STATUS_CAD_DONE
+#define SX126X_STATUS_INT_WAIT                        LORA_STATUS_INT_WAIT
+#define SX126X_STATUS_INT_TX                          LORA_STATUS_INT_TX
+#define SX126X_STATUS_INT_RX                          LORA_STATUS_INT_RX
 
 // Default Hardware Configuration
 #define SX126X_PIN_RF_IRQ                             1
@@ -74,7 +77,7 @@ class SX126x : public BaseLoRa
 
         // Transmit related methods
         void beginPacket();
-        void endPacket(uint32_t timeout=SX126X_TX_MODE_SINGLE);
+        void endPacket(uint32_t timeout=SX126X_TX_MODE_SINGLE, bool intFlag=true);
         void write(uint8_t data);
         void write(uint8_t* data, uint8_t length);
         void write(char* data, uint8_t length);
@@ -93,8 +96,8 @@ class SX126x : public BaseLoRa
         }
 
         // Receive related methods
-        void request(uint32_t timeout=SX126X_RX_MODE_SINGLE);
-        void listen(uint32_t rxPeriod, uint32_t sleepPeriod);
+        void request(uint32_t timeout=SX126X_RX_MODE_SINGLE, bool intFlag=true);
+        void listen(uint32_t rxPeriod, uint32_t sleepPeriod, bool intFlag=true);
         uint8_t available();
         uint8_t read();
         uint8_t read(uint8_t* data, uint8_t length);
@@ -111,21 +114,19 @@ class SX126x : public BaseLoRa
             SX126x_API::readBuffer(_bufferIndex, u.Binary, length);
             data = u.Data;
             _bufferIndex += length;
-            uint8_t len = length;
-            if (_payloadTxRx > length){ _payloadTxRx -= length; }
-            else { _payloadTxRx = 0; len = _payloadTxRx; }
-            return len;
+            _payloadTxRx = _payloadTxRx > length ? _payloadTxRx - length : 0;
+            return _payloadTxRx > length ? length : _payloadTxRx;
         }
 
         // Wait, operation status, and packet status methods
         uint8_t status();
-        void wait(uint32_t timeout=0);
+        bool wait(uint32_t timeout=0);
         uint32_t transmitTime();
         float dataRate();
-        float rssi();
+        int16_t rssi();
         float snr();
-        float signalRssi();
-        float rssiInst();
+        int16_t signalRssi();
+        int16_t rssiInst();
         uint16_t getError();
 
     protected:
@@ -147,13 +148,12 @@ class SX126x : public BaseLoRa
         static uint32_t _transmitTime;
         static uint8_t _bufferIndex;
         static uint8_t _payloadTxRx;
+        static int8_t _irqStatic;
         static int8_t _pinToLow;
 
         void _irqSetup(uint16_t irqMask);
-        uint16_t _waitIrq(uint32_t timeout);
         static void _interruptTx();
         static void _interruptRx();
-        uint8_t _getStatusInterrupt();
 
 };
 

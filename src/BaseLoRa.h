@@ -22,6 +22,9 @@
 #define LORA_STATUS_CAD_WAIT                        10
 #define LORA_STATUS_CAD_DETECTED                    11
 #define LORA_STATUS_CAD_DONE                        12
+#define LORA_STATUS_INT_WAIT                        13
+#define LORA_STATUS_INT_TX                          14
+#define LORA_STATUS_INT_RX                          15
 
 // Uncomment one of line below to use a LoRa model exclusively
 #define USE_LORA_SX126X
