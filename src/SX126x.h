@@ -18,9 +18,6 @@
 #define SX126X_STATUS_CAD_WAIT                        LORA_STATUS_CAD_WAIT
 #define SX126X_STATUS_CAD_DETECTED                    LORA_STATUS_CAD_DETECTED
 #define SX126X_STATUS_CAD_DONE                        LORA_STATUS_CAD_DONE
-#define SX126X_STATUS_INT_WAIT                        LORA_STATUS_INT_WAIT
-#define SX126X_STATUS_INT_TX                          LORA_STATUS_INT_TX
-#define SX126X_STATUS_INT_RX                          LORA_STATUS_INT_RX
 
 // Default Hardware Configuration
 #define SX126X_PIN_RF_IRQ                             1
@@ -94,6 +91,7 @@ class SX126x : public BaseLoRa
             _bufferIndex += length;
             _payloadTxRx += length;
         }
+        void onTransmit(void(&callback)());
 
         // Receive related methods
         void request(uint32_t timeout=SX126X_RX_MODE_SINGLE, bool intFlag=true);
@@ -117,6 +115,7 @@ class SX126x : public BaseLoRa
             _payloadTxRx = _payloadTxRx > length ? _payloadTxRx - length : 0;
             return _payloadTxRx > length ? length : _payloadTxRx;
         }
+        void onReceive(void(&callback)());
 
         // Wait, operation status, and packet status methods
         uint8_t status();
@@ -135,6 +134,8 @@ class SX126x : public BaseLoRa
         uint8_t _sf, _bw, _cr, _ldro;
         uint8_t _headerType, _payloadLength, _crcType, _invertIq;
         uint16_t _preambleLength;
+        static void (*_onTransmit)();
+        static void (*_onReceive)();
 
     private:
 
@@ -142,9 +143,8 @@ class SX126x : public BaseLoRa
         int8_t _nss, _reset, _busy;
         int8_t _irq, _txen, _rxen;
         int8_t _dio;
-        uint8_t _status;
-        uint8_t _statusRxContinuous;
-        static uint8_t _statusInterrupt;
+        uint8_t _statusWait;
+        static uint16_t _statusIrq;
         static uint32_t _transmitTime;
         static uint8_t _bufferIndex;
         static uint8_t _payloadTxRx;
@@ -154,6 +154,7 @@ class SX126x : public BaseLoRa
         void _irqSetup(uint16_t irqMask);
         static void _interruptTx();
         static void _interruptRx();
+        static void _interruptRxContinuous();
 
 };
 

@@ -1,6 +1,10 @@
 #include <SX126x.h>
 
-uint8_t SX126x::_statusInterrupt = 0b11111111;
+void (*SX126x::_onTransmit)();
+
+void (*SX126x::_onReceive)();
+
+uint16_t SX126x::_statusIrq = 0x0000;
 
 uint32_t SX126x::_transmitTime = 0;
 
@@ -204,7 +208,7 @@ void SX126x::setTxPower(uint32_t txPower)
 {
     // set output power and ramp time option
     uint8_t power, ramp;
-    switch (txPower){
+    switch (txPower) {
         case SX126X_TX_POWER_SX1261_15:
             power = 0x0E;
             ramp = SX126X_PA_RAMP_200U;
@@ -370,7 +374,9 @@ void SX126x::endPacket(uint32_t timeout, bool intFlag)
     setLoRaPacket(_headerType, _preambleLength, _payloadTxRx, _crcType, _invertIq);
 
     // set status to TX wait
-    _status = SX126X_STATUS_TX_WAIT;
+    _statusWait = SX126X_STATUS_TX_WAIT;
+    _statusIrq = 0x0000;
+    // calculate TX timeout config
     uint32_t txTimeout = timeout << 6;
     if (txTimeout > 0x00FFFFFF) txTimeout = SX126X_TX_MODE_SINGLE;
 
@@ -378,9 +384,8 @@ void SX126x::endPacket(uint32_t timeout, bool intFlag)
     SX126x_API::setTx(txTimeout);
     _transmitTime = millis();
 
-    // set interrupt status to wait and attach TX interrupt handler
+    // set operation status to wait and attach TX interrupt handler
     if (_irq != -1 && intFlag) {
-        _statusInterrupt = SX126X_STATUS_INT_WAIT;
         _irqStatic = digitalPinToInterrupt(_irq);
         attachInterrupt(_irqStatic, SX126x::_interruptTx, RISING);
     }
@@ -417,31 +422,34 @@ void SX126x::request(uint32_t timeout, bool intFlag)
     _irqSetup(SX126X_IRQ_RX_DONE | SX126X_IRQ_TIMEOUT | SX126X_IRQ_HEADER_ERR | SX126X_IRQ_CRC_ERR);
 
     // set status to RX wait or RX continuous wait
-    _status = SX126X_STATUS_RX_WAIT;
+    _statusWait = SX126X_STATUS_RX_WAIT;
+    _statusIrq = 0x0000;
+    // calculate RX timeout config
     uint32_t rxTimeout = timeout << 6;
     if (rxTimeout > 0x00FFFFFF) rxTimeout = SX126X_RX_MODE_SINGLE;
-    if (timeout == SX126X_RX_MODE_CONTINUOUS){
+    if (timeout == SX126X_RX_MODE_CONTINUOUS) {
         rxTimeout = SX126X_RX_MODE_CONTINUOUS;
-        _status = SX126X_STATUS_RX_CONTINUOUS_WAIT;
-        _statusRxContinuous = SX126X_STATUS_RX_WAIT;
+        _statusWait = SX126X_STATUS_RX_CONTINUOUS_WAIT;
     }
 
     // set txen pin to low and rxen pin to high
     if ((_rxen != -1) && (_txen != -1)) {
         digitalWrite(_rxen, HIGH);
         digitalWrite(_txen, LOW);
-        if (timeout == SX126X_RX_MODE_CONTINUOUS) _pinToLow = -1;
-        else _pinToLow = _rxen;
+        _pinToLow = _rxen;
     }
 
     // set device to receive mode with configured timeout, single, or continuous operation
     SX126x_API::setRx(rxTimeout);
 
-    // set interrupt status to wait and attach RX interrupt handler
+    // set operation status to wait and attach RX interrupt handler
     if (_irq != -1 && intFlag) {
-        _statusInterrupt = SX126X_STATUS_INT_WAIT;
         _irqStatic = digitalPinToInterrupt(_irq);
-        attachInterrupt(_irqStatic, SX126x::_interruptRx, RISING);
+        if (timeout == SX126X_RX_MODE_CONTINUOUS) {
+            attachInterrupt(_irqStatic, SX126x::_interruptRxContinuous, RISING);
+        } else {
+            attachInterrupt(_irqStatic, SX126x::_interruptRx, RISING);
+        }
     }
 }
 
@@ -451,8 +459,9 @@ void SX126x::listen(uint32_t rxPeriod, uint32_t sleepPeriod, bool intFlag)
     _irqSetup(SX126X_IRQ_RX_DONE | SX126X_IRQ_TIMEOUT | SX126X_IRQ_HEADER_ERR | SX126X_IRQ_CRC_ERR);
 
     // set status to RX wait
-    _status = SX126X_STATUS_RX_WAIT;
-    uint32_t timeout = rxPeriod;
+    _statusWait = SX126X_STATUS_RX_WAIT;
+    _statusIrq = 0x0000;
+    // calculate RX period and sleep period config
     rxPeriod = rxPeriod << 6;
     sleepPeriod = sleepPeriod << 6;
     if (rxPeriod > 0x00FFFFFF) rxPeriod = 0x00FFFFFF;
@@ -468,9 +477,8 @@ void SX126x::listen(uint32_t rxPeriod, uint32_t sleepPeriod, bool intFlag)
     // set device to receive mode with configured receive and sleep period
     SX126x_API::setRxDutyCycle(rxPeriod, sleepPeriod);
 
-    // set interrupt status to wait and attach RX interrupt handler
+    // set operation status to wait and attach RX interrupt handler
     if (_irq != -1 && intFlag) {
-        _statusInterrupt = SX126X_STATUS_INT_WAIT;
         _irqStatic = digitalPinToInterrupt(_irq);
         attachInterrupt(_irqStatic, SX126x::_interruptRx, RISING);
     }
@@ -521,81 +529,60 @@ void SX126x::flush()
 
 uint8_t SX126x::status()
 {
-    // get status for transmit and receive operation with interrupt based on IRQ status
-    uint16_t irqStat;
-    if (_statusInterrupt == SX126X_STATUS_INT_TX) {
-        SX126x_API::getIrqStatus(&irqStat);
-        if (irqStat & SX126X_IRQ_TIMEOUT) return SX126X_STATUS_TX_TIMEOUT;
-        else return SX126X_STATUS_TX_DONE;
-    } else if (_statusInterrupt == SX126X_STATUS_INT_RX) {
-        SX126x_API::getIrqStatus(&irqStat);
-        if (irqStat & SX126X_IRQ_TIMEOUT) return SX126X_STATUS_RX_TIMEOUT;
-        else if (irqStat & SX126X_IRQ_HEADER_ERR) return SX126X_STATUS_HEADER_ERR;
-        else if (irqStat & SX126X_IRQ_CRC_ERR) return SX126X_STATUS_CRC_ERR;
-        else return SX126X_STATUS_RX_DONE;
-
-    // get status from status countinuous for receive countinuous operation
-    } else if (_status == SX126X_STATUS_RX_CONTINUOUS_WAIT) {
-        uint8_t stat = _statusRxContinuous;
-        _statusRxContinuous = SX126X_STATUS_RX_WAIT;
-        return stat;
+    // set back status IRQ for RX continuous operation
+    uint16_t statusIrq = _statusIrq;
+    if (_statusWait == SX126X_STATUS_RX_CONTINUOUS_WAIT) {
+        _statusIrq = 0x0000;
     }
-    // get status for transmit and receive operation
-    return _status;
+
+    // get status for transmit and receive operation based on status IRQ
+    if (statusIrq & SX126X_IRQ_TIMEOUT) {
+        if (_statusWait == SX126X_STATUS_TX_WAIT) return SX126X_STATUS_TX_TIMEOUT;
+        else return SX126X_STATUS_RX_TIMEOUT;
+    }
+    else if (statusIrq & SX126X_IRQ_HEADER_ERR) return SX126X_STATUS_HEADER_ERR;
+    else if (statusIrq & SX126X_IRQ_CRC_ERR) return SX126X_STATUS_CRC_ERR;
+    else if (statusIrq & SX126X_IRQ_TX_DONE) return SX126X_STATUS_TX_DONE;
+    else if (statusIrq & SX126X_IRQ_RX_DONE) return SX126X_STATUS_RX_DONE;
+
+    // return TX or RX wait status
+    return statusIrq;
 }
 
 bool SX126x::wait(uint32_t timeout)
 {
     // immediately return when currently not waiting transmit or receive process
-    if (_status != SX126X_STATUS_TX_WAIT && _status != SX126X_STATUS_RX_WAIT && _status != SX126X_STATUS_RX_CONTINUOUS_WAIT) {
-        return false;
-    }
+    if (_statusIrq) return false;
 
     // wait transmit or receive process finish by checking IRQ status
     uint16_t irqStat = 0x0000;
     uint32_t t = millis();
-    while (irqStat == 0x0000) {
+    while (irqStat == 0x0000 && _statusIrq == 0x0000) {
         SX126x_API::getIrqStatus(&irqStat);
         // return when timeout reached
         if (millis() - t > timeout && timeout != 0) return false;
     }
 
-    // immediately return when interrupt signal hit except for RX continuous operation
-    if (_statusInterrupt != SX126X_STATUS_INT_WAIT && _status != SX126X_STATUS_RX_CONTINUOUS_WAIT) {
+    if (_statusIrq) {
+        // immediately return when interrupt signal hit
         return false;
-    }
-
-    // for transmit, calculate transmit time, set back txen pin to low, and set status based on IRQ status
-    if (_status == SX126X_STATUS_TX_WAIT) {
+    } else if (_statusWait == SX126X_STATUS_TX_WAIT) {
+        // for transmit, calculate transmit time and set back txen pin to low
         _transmitTime = millis() - _transmitTime;
-
         if (_txen != -1) digitalWrite(_txen, LOW);
-
-        if (irqStat & SX126X_IRQ_TIMEOUT) _status = SX126X_STATUS_TX_TIMEOUT;
-        else if (irqStat & SX126X_IRQ_TX_DONE) _status = SX126X_STATUS_TX_DONE;
-
-    // for receive, get received payload length and buffer index, set back rxen pin to low, and set status based on IRQ status
-    } else if (_status == SX126X_STATUS_RX_WAIT) {
+    } else if (_statusWait == SX126X_STATUS_RX_WAIT) {
+        // for receive, get received payload length and buffer index and set back rxen pin to low
         SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
-
         if (_rxen != -1) digitalWrite(_rxen, LOW);
-
-        if (irqStat & SX126X_IRQ_TIMEOUT) _status = SX126X_STATUS_RX_TIMEOUT;
-        else if (irqStat & SX126X_IRQ_HEADER_ERR) _status = SX126X_STATUS_HEADER_ERR;
-        else if (irqStat & SX126X_IRQ_CRC_ERR) _status = SX126X_STATUS_CRC_ERR;
-        else if (irqStat & SX126X_IRQ_RX_DONE) _status = SX126X_STATUS_RX_DONE;
-
         SX126x_API::fixRxTimeout();
-
-    // for receive continuous, get received payload length and buffer index, and set status continuous based on IRQ status
-    } else if (_status == SX126X_STATUS_RX_CONTINUOUS_WAIT) {
+    } else if (_statusWait == SX126X_STATUS_RX_CONTINUOUS_WAIT) {
+        // for receive continuous, get received payload length and buffer index and clear IRQ status
         SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
         SX126x_API::clearIrqStatus(0x03FF);
-
-        if (irqStat & SX126X_IRQ_HEADER_ERR) _statusRxContinuous = SX126X_STATUS_HEADER_ERR;
-        else if (irqStat & SX126X_IRQ_CRC_ERR) _statusRxContinuous = SX126X_STATUS_CRC_ERR;
-        else if (irqStat & SX126X_IRQ_RX_DONE) _statusRxContinuous = SX126X_STATUS_RX_DONE;
     }
+
+    // store IRQ status
+    _statusIrq = irqStat;
     return true;
 }
 
@@ -669,24 +656,65 @@ void SX126x::_interruptTx()
     // calculate transmit time
     _transmitTime = millis() - _transmitTime;
 
-    // change interrupt status to TX
-    _statusInterrupt = SX126X_STATUS_INT_TX;
-
     // set back txen pin to low and detach interrupt
     if (_pinToLow != -1) digitalWrite(_pinToLow, LOW);
     detachInterrupt(_irqStatic);
+
+    // change operation status to TX
+    SX126x_API::getIrqStatus(&_statusIrq);
+
+    // call onTransmit function
+    if (_onTransmit) {
+        _onTransmit();
+    }
 }
 
 void SX126x::_interruptRx()
 {
-    // get received payload length and buffer index
-    SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
-    SX126x_API::fixRxTimeout();
-
-    // change interrupt status to RX
-    _statusInterrupt = SX126X_STATUS_INT_RX;
-
     // set back rxen pin to low and detach interrupt
     if (_pinToLow != -1) digitalWrite(_pinToLow, LOW);
     detachInterrupt(_irqStatic);
+    SX126x_API::fixRxTimeout();
+
+    // change operation status to RX
+    SX126x_API::getIrqStatus(&_statusIrq);
+
+    // get received payload length and buffer index
+    SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
+
+    // call onReceive function
+    if (_onReceive) {
+        _onReceive();
+    }
+}
+
+void SX126x::_interruptRxContinuous()
+{
+    // for receive continuous interrupt happen slightly before register update, wait for IRQ status update needed
+    _statusIrq = 0x0000;
+    while (_statusIrq == 0x0000) {
+        SX126x_API::getIrqStatus(&_statusIrq);
+    }
+    // clear IRQ status
+    SX126x_API::clearIrqStatus(0x03FF);
+
+    // get received payload length and buffer index
+    SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
+
+    // call onReceive function
+    if (_onReceive) {
+        _onReceive();
+    }
+}
+
+void SX126x::onTransmit(void(&callback)())
+{
+    // register onTransmit function to call every transmit done
+    _onTransmit = &callback;
+}
+
+void SX126x::onReceive(void(&callback)())
+{
+    // register onReceive function to call every receive done
+    _onReceive = &callback;
 }
