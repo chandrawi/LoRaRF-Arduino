@@ -83,11 +83,11 @@ void loop() {
 
   // Set RF module to listen mode with 30 ms RX mode and 10 ms sleep
   // Some LoRa packet will not be received if sleep period too long or preamble length too short
-   uint32_t rxPeriod = 30;
-   uint32_t sleepPeriod = 10;
-   LoRa.listen(rxPeriod, sleepPeriod);
+  uint32_t rxPeriod = 30;
+  uint32_t sleepPeriod = 10;
+  LoRa.listen(rxPeriod, sleepPeriod);
 
-  // Wait until modulation process for receiving packet finish
+  // Wait incoming signal and demodulation process for receiving packet finish
   LoRa.wait();
   
   // Get received message object

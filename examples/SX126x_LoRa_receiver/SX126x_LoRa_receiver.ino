@@ -67,6 +67,8 @@ void loop() {
   
   // Request for receiving new LoRa packet
   LoRa.request();
+  // Wait for incoming LoRa packet
+  LoRa.wait();
 
   // Put received packet to message and counter variable
   // read() and available() method must be called after request() or listen() method
@@ -90,8 +92,6 @@ void loop() {
   Serial.print(LoRa.rssi());
   Serial.print(" dBm | SNR = ");
   Serial.print(LoRa.snr());
-  Serial.print(" dB | signalRSSI = ");
-  Serial.print(LoRa.signalRssi());
   Serial.println(" dB");
   
   // Show received status in case CRC or header error occur

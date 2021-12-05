@@ -83,6 +83,9 @@ void loop() {
   Serial.print("  ");
   Serial.println(counter++);
 
+  // Wait until modulation process for transmitting packet finish
+  LoRa.wait();
+
   // Print transmit time and data rate
   // Transmit time show the actual modulation time for transmitting LoRa packet
   Serial.print("Transmit time: ");

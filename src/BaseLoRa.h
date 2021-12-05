@@ -33,21 +33,17 @@ class BaseLoRa
     public:
 
         virtual void beginPacket();
-        virtual void endPacket(uint32_t timeout);
+        virtual void endPacket(uint32_t timeout, bool intFlag);
         virtual void write(uint8_t data);
         virtual void write(uint8_t* data, uint8_t length);
-        virtual void write(char* data, uint8_t length);
 
-        virtual void request(uint32_t timeout);
-        virtual void listen(uint32_t rxPeriod, uint32_t sleepPeriod);
+        virtual void request(uint32_t timeout, bool intFlag);
         virtual uint8_t available();
         virtual uint8_t read();
         virtual uint8_t read(uint8_t* data, uint8_t length);
-        virtual uint8_t read(char* data, uint8_t length);
-        virtual void setLoRaPayloadLength(uint8_t length);
 
+        virtual bool wait(uint32_t timeout);
         virtual uint8_t status();
-        virtual void wait();
 
 };
 

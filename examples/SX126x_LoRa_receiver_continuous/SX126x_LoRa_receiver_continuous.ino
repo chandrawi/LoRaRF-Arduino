@@ -10,7 +10,7 @@ void setup() {
   // Begin LoRa radio and set NSS, reset, busy, txen, and rxen pin with connected arduino pins
   // IRQ pin must connected to Arduino external interrupt pin for continuous RX mode. Set txen and rxen pin to -1 if RF module doesn't have one
   Serial.println("Begin LoRa radio");
-  int8_t nssPin = 10, resetPin = 9, busyPin = 4, irqPin = 2, txenPin = 8, rxenPin = 7;
+  int8_t nssPin = 10, resetPin = 9, busyPin = 4, irqPin = -1, txenPin = 8, rxenPin = 7;
   if (!LoRa.begin(nssPin, resetPin, busyPin, irqPin, txenPin, rxenPin)){
     Serial.println("Something wrong, can't begin LoRa radio");
     while(1);
@@ -72,11 +72,9 @@ void loop() {
   LoRa.wait();
 
   // Put received packet to message and counter variable
-  // read() and available() method must be called after request() or listen() method
   const uint8_t msgLen = LoRa.available() - 1;
   char message[msgLen];
   uint8_t counter;
-  // available() method return remaining received payload length and will decrement each read() or get() method called
   uint8_t i=0;
   while (LoRa.available() > 1){
     message[i++] = LoRa.read();
@@ -93,8 +91,6 @@ void loop() {
   Serial.print(LoRa.rssi());
   Serial.print(" dBm | SNR = ");
   Serial.print(LoRa.snr());
-  Serial.print(" dB | signalRSSI = ");
-  Serial.print(LoRa.signalRssi());
   Serial.println(" dB");
   
   // Show received status in case CRC or header error occur

@@ -660,7 +660,7 @@ void SX126x::_interruptTx()
     if (_pinToLow != -1) digitalWrite(_pinToLow, LOW);
     detachInterrupt(_irqStatic);
 
-    // change operation status to TX
+    // store IRQ status
     SX126x_API::getIrqStatus(&_statusIrq);
 
     // call onTransmit function
@@ -676,7 +676,7 @@ void SX126x::_interruptRx()
     detachInterrupt(_irqStatic);
     SX126x_API::fixRxTimeout();
 
-    // change operation status to RX
+    // store IRQ status
     SX126x_API::getIrqStatus(&_statusIrq);
 
     // get received payload length and buffer index
@@ -690,11 +690,9 @@ void SX126x::_interruptRx()
 
 void SX126x::_interruptRxContinuous()
 {
-    // for receive continuous interrupt happen slightly before register update, wait for IRQ status update needed
-    _statusIrq = 0x0000;
-    while (_statusIrq == 0x0000) {
-        SX126x_API::getIrqStatus(&_statusIrq);
-    }
+    // store IRQ status
+    SX126x_API::getIrqStatus(&_statusIrq);
+
     // clear IRQ status
     SX126x_API::clearIrqStatus(0x03FF);
 
