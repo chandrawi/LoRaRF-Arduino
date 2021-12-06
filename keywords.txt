@@ -44,11 +44,15 @@ setFskWhitening	KEYWORD2
 beginPacket	KEYWORD2
 endPacket	KEYWORD2
 write	KEYWORD2
+put	KEYWORD2
+onTransmit	KEYWORD2
 request	KEYWORD2
 listen	KEYWORD2
 available	KEYWORD2
 read	KEYWORD2
 flush	KEYWORD2
+get	KEYWORD2
+onReceive	KEYWORD2
 status	KEYWORD2
 wait	KEYWORD2
 transmitTime	KEYWORD2
