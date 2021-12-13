@@ -1,13 +1,155 @@
 #ifndef _SX127X_H_
 #define _SX127X_H_
 
+#include <SPI.h>
 #include <BaseLoRa.h>
 
+// SX127X register map
+#define SX127X_REG_FIFO                         0x00
+#define SX127X_REG_OP_MODE                      0x01
+#define SX127X_REG_FRF_MSB                      0x06
+#define SX127X_REG_FRF_MID                      0x07
+#define SX127X_REG_FRF_LSB                      0x08
+#define SX127X_REG_PA_CONFIG                    0x09
+#define SX127X_REG_OCP                          0x0B
+#define SX127X_REG_LNA                          0x0C
+#define SX127X_REG_FIFO_ADDR_PTR                0x0D
+#define SX127X_REG_FIFO_TX_BASE_ADDR            0x0E
+#define SX127X_REG_FIFO_RX_BASE_ADDR            0x0F
+#define SX127X_REG_FIFO_RX_CURRENT_ADDR         0x10
+#define SX127X_REG_IRQ_FLAGS                    0x12
+#define SX127X_REG_RX_NB_BYTES                  0x13
+#define SX127X_REG_PKT_SNR_VALUE                0x19
+#define SX127X_REG_PKT_RSSI_VALUE               0x1A
+#define SX127X_REG_RSSI_VALUE                   0x1B
+#define SX127X_REG_MODEM_CONFIG_1               0x1D
+#define SX127X_REG_MODEM_CONFIG_2               0x1E
+#define SX127X_REG_PREAMBLE_MSB                 0x20
+#define SX127X_REG_PREAMBLE_LSB                 0x21
+#define SX127X_REG_PAYLOAD_LENGTH               0x22
+#define SX127X_REG_MODEM_CONFIG_3               0x26
+#define SX127X_REG_FREQ_ERROR_MSB               0x28
+#define SX127X_REG_FREQ_ERROR_MID               0x29
+#define SX127X_REG_FREQ_ERROR_LSB               0x2A
+#define SX127X_REG_RSSI_WIDEBAND                0x2C
+#define SX127X_REG_DETECTION_OPTIMIZE           0x31
+#define SX127X_REG_INVERTIQ                     0x33
+#define SX127X_REG_DETECTION_THRESHOLD          0x37
+#define SX127X_REG_SYNC_WORD                    0x39
+#define SX127X_REG_INVERTIQ2                    0x3B
+#define SX127X_REG_DIO_MAPPING_1                0x40
+#define SX127X_REG_VERSION                      0x42
+#define SX127X_REG_TCXO                         0x4B
+#define SX127X_REG_PA_DAC                       0x4D
+
+// Long range mode
+#define SX127X_FSK_MODEM                        0x00        // GFSK packet type
+#define SX127X_OOK_MODEM                        0x20        // OOK packet type
+#define SX127X_LORA_MODEM                       0x80        // LoRa packet type
+
+// Devices modes
+#define SX127X_MODE_SLEEP                       0x00        // sleep
+#define SX127X_MODE_STDBY                       0x01        // standby
+#define SX127X_MODE_TX                          0x03        // transmit
+#define SX127X_MODE_RX_CONTINUOUS               0x05        // continuous receive
+#define SX127X_MODE_RX_SINGLE                   0x06        // single receive
+#define SX127X_MODE_CAD                         0x07        // channel activity detection (CAD)
+
+// IRQ flags
+#define SX127X_IRQ_CAD_DETECTED                 0x01        // Valid Lora signal detected during CAD operation
+#define SX127X_IRQ_FHSS_CHANGE                  0x02        // FHSS change channel interrupt
+#define SX127X_IRQ_CAD_DONE                     0x04        // channel activity detection finished
+#define SX127X_IRQ_TX_DONE                      0x08        // packet transmission completed
+#define SX127X_IRQ_HEADER_VALID                 0x10        // valid LoRa header received
+#define SX127X_IRQ_CRC_ERR                      0x20        // wrong CRC received
+#define SX127X_IRQ_RX_DONE                      0x40        // packet received
+#define SX127X_IRQ_RX_TIMEOUT                   0x80        // waiting packet received timeout
+
+// TX and RX operation status
+#define SX127X_STATUS_DEFAULT                   LORA_STATUS_DEFAULT
+#define SX127X_STATUS_TX_WAIT                   LORA_STATUS_TX_WAIT
+#define SX127X_STATUS_TX_TIMEOUT                LORA_STATUS_TX_TIMEOUT
+#define SX127X_STATUS_TX_DONE                   LORA_STATUS_TX_DONE
+#define SX127X_STATUS_RX_WAIT                   LORA_STATUS_RX_WAIT
+#define SX127X_STATUS_RX_CONTINUOUS_WAIT        LORA_STATUS_RX_CONTINUOUS_WAIT
+#define SX127X_STATUS_RX_TIMEOUT                LORA_STATUS_RX_TIMEOUT
+#define SX127X_STATUS_RX_DONE                   LORA_STATUS_RX_DONE
+#define SX127X_STATUS_HEADER_ERR                LORA_STATUS_HEADER_ERR
+#define SX127X_STATUS_CRC_ERR                   LORA_STATUS_CRC_ERR
+#define SX127X_STATUS_CAD_WAIT                  LORA_STATUS_CAD_WAIT
+#define SX127X_STATUS_CAD_DETECTED              LORA_STATUS_CAD_DETECTED
+#define SX127X_STATUS_CAD_DONE                  LORA_STATUS_CAD_DONE
+#define SX126X_STATUS_INT_WAIT                  LORA_STATUS_INT_WAIT
+#define SX126X_STATUS_INT_TX                    LORA_STATUS_INT_TX
+#define SX126X_STATUS_INT_RX                    LORA_STATUS_INT_RX
+
+// Default Hardware Configuration
+#define SX127X_PIN_NSS                          10
+#define SX127X_PIN_RESET                        4
+#define SX127X_SPI                              SPI
+#define SX127X_SPI_FREQUENCY                    4000000
+
+#ifdef USE_LORA_SX126X
+class SX127x
+#else
 class SX127x : public BaseLoRa
+#endif
 {
     public:
 
         SX127x();
+
+        // Common methods
+        bool begin();
+        bool begin(int8_t nss, int8_t reset, int8_t irq=-1, int8_t txen=-1, int8_t rxen=-1);
+        void end();
+        bool reset();
+        void sleep();
+        void wake();
+        void standby();
+        void setActive();
+
+        // Hardware configuration methods
+        void setSPI(SPIClass &SpiObject, uint32_t frequency=SX127X_SPI_FREQUENCY);
+        void setPins(int8_t nss, int8_t reset, int8_t irq=-1, int8_t txen=-1, int8_t rxen=-1);
+
+        // Modem, modulation parameter, and packet parameter setup methods
+        void setModem(uint8_t modem=SX127X_LORA_MODEM);
+
+        // Utilities
+        static void writeBits(uint8_t address, uint8_t data, uint8_t position, uint8_t length);
+        static void writeRegister(uint8_t address, uint8_t data);
+        static uint8_t readRegister(uint8_t address);
+
+    protected:
+
+        uint8_t _modem;
+        uint32_t _frequency;
+        uint8_t _sf;
+        uint32_t _bw;
+        uint8_t _cr;
+        bool _ldro;
+        uint8_t _headerType;
+        uint16_t _preambleLength;
+        uint8_t _payloadLength;
+        bool _crcType;
+        bool _invertIq;
+
+    private:
+
+        SPIClass* _spi;
+        int8_t _nss, _reset, _irq, _txen, _rxen;
+        static SPIClass* _spiStatic;
+        static uint32_t _spiFrequency;
+        static int8_t _nssStatic;
+        uint8_t _statusWait;
+        static uint16_t _statusIrq;
+        static uint32_t _transmitTime;
+        static uint8_t _payloadTxRx;
+        static int8_t _irqStatic;
+        static int8_t _pinToLow;
+
+        static uint8_t _transfer(uint8_t address, uint8_t data);
 
 };
 
