@@ -1,10 +1,18 @@
 #include <SX127x.h>
 
-SPIClass* SX127x::_spiStatic;
+SPIClass* SX127x::_spiStatic = &SX127X_SPI;
 
-uint32_t SX127x::_spiFrequency;
+uint32_t SX127x::_spiFrequency = SX127X_SPI_FREQUENCY;
 
-int8_t SX127x::_nssStatic;
+int8_t SX127x::_nssStatic = SX127X_PIN_NSS;
+
+uint8_t SX127x::_statusIrq = 0x00;
+
+uint32_t SX127x::_transmitTime = 0;
+
+uint8_t SX127x::_payloadTxRx = 0;
+
+int8_t SX127x::_pinToLow = -1;
 
 SX127x::SX127x()
 {
@@ -99,6 +107,185 @@ void SX127x::setModem(uint8_t modem)
     _modem = modem;
     sleep();
     writeRegister(SX127X_REG_OP_MODE, modem | SX127X_MODE_STDBY);
+}
+
+void SX127x::setFrequency(uint32_t frequency)
+{
+    _frequency = frequency;
+    // calculate frequency
+    uint64_t frf = ((uint64_t) frequency << 19) / 32000000;
+    writeRegister(SX127X_REG_FRF_MSB, (uint8_t) (frf >> 16));
+    writeRegister(SX127X_REG_FRF_MID, (uint8_t) (frf >> 8));
+    writeRegister(SX127X_REG_FRF_LSB, (uint8_t) frf);
+}
+
+void SX127x::beginPacket()
+{
+    // clear IRQ flag from last TX or RX operation
+    writeRegister(SX127X_REG_IRQ_FLAGS, 0xFF);
+
+    // reset TX buffer base address, FIFO address pointer and payload length
+    writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, 0);
+    writeRegister(SX127X_REG_FIFO_ADDR_PTR, 0);
+    _payloadTxRx = 0;
+
+    // set txen pin to high and rxen pin to low
+    if ((_rxen != -1) && (_txen != -1)){
+        digitalWrite(_rxen, LOW);
+        digitalWrite(_txen, HIGH);
+        _pinToLow = _txen;
+    }
+}
+
+void SX127x::endPacket()
+{
+    // set packet payload length
+    writeRegister(SX127X_REG_PAYLOAD_LENGTH, _payloadTxRx);
+
+    // set status to TX wait
+    _statusWait = SX127X_STATUS_TX_WAIT;
+    _statusIrq = 0x0000;
+
+    // set device to transmit mode
+    writeRegister(SX127X_REG_OP_MODE, _modem | SX127X_MODE_TX);
+    _transmitTime = millis();
+
+}
+
+void SX127x::write(uint8_t data)
+{
+    // write single byte of package to be transmitted
+    write(&data, 1);
+}
+
+void SX127x::write(uint8_t* data, uint8_t length)
+{
+    // write multiple bytes of package to be transmitted in FIFO buffer
+    for (uint8_t i = 0; i < length; i++) {
+        writeRegister(SX127X_REG_FIFO, data[i]);
+    }
+    // increasing payload length
+    _payloadTxRx += length;
+}
+
+void SX127x::write(char* data, uint8_t length)
+{
+    // write multiple bytes of package to be transmitted for char type
+    uint8_t* data_ = (uint8_t*) data;
+    write(data_, length);
+}
+
+void SX127x::request()
+{
+    // clear IRQ flag from last TX or RX operation
+    writeRegister(SX127X_REG_IRQ_FLAGS, 0xFF);
+
+    // set txen pin to low and rxen pin to high
+    if ((_rxen != -1) && (_txen != -1)){
+        digitalWrite(_rxen, HIGH);
+        digitalWrite(_txen, LOW);
+        _pinToLow = _rxen;
+    }
+
+    // set status to RX wait
+    _statusWait = SX127X_STATUS_RX_WAIT;
+    _statusIrq = 0x0000;
+
+    // set device to receive mode
+    writeRegister(SX127X_REG_OP_MODE, _modem | SX127X_MODE_RX_CONTINUOUS);
+}
+
+uint8_t SX127x::available()
+{
+    // get size of package still available to read
+    return _payloadTxRx;
+}
+
+uint8_t SX127x::read()
+{
+    // read single byte of received package
+    uint8_t data;
+    read(&data, 1);
+    return data;
+}
+
+uint8_t SX127x::read(uint8_t* data, uint8_t length)
+{
+    // calculate actual read length and remaining payload length
+    if (_payloadTxRx > length) {
+        _payloadTxRx -= length;
+    }
+    else {
+        length = _payloadTxRx;
+        _payloadTxRx = 0;
+    }
+    // read multiple bytes of received package in FIFO buffer
+    for (uint8_t i = 0; i < length; i++) {
+        data[i] = readRegister(SX127X_REG_FIFO);
+    }
+    return length;
+}
+
+uint8_t SX127x::read(char* data, uint8_t length)
+{
+    // read multiple bytes of received package for char type
+    uint8_t* data_ = (uint8_t*) data;
+    return read(data_, length);
+}
+
+void SX127x::purge(uint8_t length)
+{
+    // subtract or reset received payload length
+    _payloadTxRx = (_payloadTxRx > length) && length ? _payloadTxRx - length : 0;
+}
+
+bool SX127x::wait(uint32_t timeout)
+{
+    // immediately return when currently not waiting transmit or receive process
+    if (_statusIrq) return false;
+
+    // wait transmit or receive process finish by checking IRQ status
+    uint8_t irqFlag = 0x00;
+    uint8_t irqFlagMask = _statusWait == SX127X_STATUS_TX_WAIT ? SX127X_IRQ_TX_DONE : SX127X_IRQ_RX_DONE | SX127X_IRQ_CRC_ERR;
+    uint32_t t = millis();
+    while (!(irqFlag & irqFlagMask)) {
+        irqFlag = readRegister(SX127X_REG_IRQ_FLAGS);
+        // return when timeout reached
+        if (millis() - t > timeout && timeout != 0) return false;
+    }
+
+    if (_statusWait == SX127X_STATUS_TX_WAIT) {
+        // calculate transmit time and set back txen pin to low
+        _transmitTime = millis() - _transmitTime;
+        if (_txen != -1) digitalWrite(_txen, LOW);
+
+    } else if (_statusWait == SX127X_STATUS_RX_WAIT) {
+        // terminate receive mode by setting mode to standby
+        standby();
+        // set pointer to RX buffer base address and get packet payload length
+        writeRegister(SX127X_REG_FIFO_ADDR_PTR, readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR));
+        _payloadTxRx = readRegister(SX127X_REG_RX_NB_BYTES);
+        // set back rxen pin to low
+        if (_rxen != -1) digitalWrite(_rxen, LOW);
+
+    }
+
+    // store IRQ status
+    _statusIrq = irqFlag;
+    return true;
+}
+
+uint8_t SX127x::status()
+{
+    // get status for transmit and receive operation based on status IRQ
+    if (_statusIrq & SX127X_IRQ_RX_TIMEOUT) return SX127X_STATUS_TX_TIMEOUT;
+    else if (!(_statusIrq & SX127X_IRQ_HEADER_VALID)) return SX127X_STATUS_HEADER_ERR;
+    else if (_statusIrq & SX127X_IRQ_CRC_ERR) return SX127X_STATUS_CRC_ERR;
+    else if (_statusIrq & SX127X_IRQ_TX_DONE) return SX127X_STATUS_TX_DONE;
+    else if (_statusIrq & SX127X_IRQ_RX_DONE) return SX127X_STATUS_RX_DONE;
+
+    // return TX or RX wait status
+    return _statusWait;
 }
 
 void SX127x::writeBits(uint8_t address, uint8_t data, uint8_t position, uint8_t length)

@@ -115,6 +115,26 @@ class SX127x : public BaseLoRa
 
         // Modem, modulation parameter, and packet parameter setup methods
         void setModem(uint8_t modem=SX127X_LORA_MODEM);
+        void setFrequency(uint32_t frequency);
+
+        // Transmit related methods
+        void beginPacket();
+        void endPacket();
+        void write(uint8_t data);
+        void write(uint8_t* data, uint8_t length);
+        void write(char* data, uint8_t length);
+
+        // Receive related methods
+        void request();
+        uint8_t available();
+        uint8_t read();
+        uint8_t read(uint8_t* data, uint8_t length);
+        uint8_t read(char* data, uint8_t length);
+        void purge(uint8_t length=0);
+
+        // Wait, operation status, and packet status methods
+        bool wait(uint32_t timeout=0);
+        uint8_t status();
 
         // Utilities
         static void writeBits(uint8_t address, uint8_t data, uint8_t position, uint8_t length);
@@ -143,7 +163,7 @@ class SX127x : public BaseLoRa
         static uint32_t _spiFrequency;
         static int8_t _nssStatic;
         uint8_t _statusWait;
-        static uint16_t _statusIrq;
+        static uint8_t _statusIrq;
         static uint32_t _transmitTime;
         static uint8_t _payloadTxRx;
         static int8_t _irqStatic;
