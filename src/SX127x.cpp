@@ -30,11 +30,9 @@ bool SX127x::begin()
 
     // begin spi and perform device reset
     _spi->begin();
-    SX127x::reset();
+    if (!SX127x::reset()) return false;
 
-    // check if device connect and set modem to LoRa
-    uint8_t version = readRegister(SX127X_REG_VERSION);
-    if (version != 0x12 && version != 0x22) return false;
+    // set modem to LoRa
     setModem(SX127X_LORA_MODEM);
     return true;
 }
@@ -59,6 +57,14 @@ bool SX127x::reset()
     delay(1);
     digitalWrite(_reset, HIGH);
     delay(10);
+    // wait until device connected, return false when device too long to respond
+    uint32_t t = millis();
+    uint8_t version = 0x00;
+    while (version != 0x12 && version != 0x22) {
+        version = readRegister(SX127X_REG_VERSION);
+        if (millis() - t > 1000) return false;
+    }
+    return true;
 }
 
 void SX127x::sleep()
@@ -286,6 +292,43 @@ uint8_t SX127x::status()
 
     // return TX or RX wait status
     return _statusWait;
+}
+
+uint32_t SX127x::transmitTime()
+{
+    // get transmit time in millisecond (ms)
+    return _transmitTime;
+}
+
+float SX127x::dataRate()
+{
+    // get data rate last transmitted package in kbps
+    return 1000.0 * _payloadTxRx / _transmitTime;
+}
+
+int16_t SX127x::packetRssi()
+{
+    // get relative signal strength index (RSSI) of last incoming package
+    int16_t offset = _frequency < SX127X_BAND_THRESHOLD ? SX127X_RSSI_OFFSET_LF : SX127X_RSSI_OFFSET_HF;
+    if (readRegister(SX127X_REG_VERSION) == 0x22) {
+        offset = SX1272_RSSI_OFFSET;
+    }
+    return (int16_t) readRegister(SX127X_REG_PKT_RSSI_VALUE) - offset;
+}
+
+int16_t SX127x::rssi()
+{
+    int16_t offset = _frequency < SX127X_BAND_THRESHOLD ? SX127X_RSSI_OFFSET_LF : SX127X_RSSI_OFFSET_HF;
+    if (readRegister(SX127X_REG_VERSION) == 0x22) {
+        offset = SX1272_RSSI_OFFSET;
+    }
+    return (int16_t) readRegister(SX127X_REG_RSSI_VALUE) - offset;
+}
+
+float SX127x::snr()
+{
+    // get signal to noise ratio (SNR) of last incoming package
+    return readRegister(SX127X_REG_PKT_SNR_VALUE) / 4.0;
 }
 
 void SX127x::writeBits(uint8_t address, uint8_t data, uint8_t position, uint8_t length)

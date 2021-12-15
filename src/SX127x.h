@@ -65,6 +65,12 @@
 #define SX127X_IRQ_RX_DONE                      0x40        // packet received
 #define SX127X_IRQ_RX_TIMEOUT                   0x80        // waiting packet received timeout
 
+// Rssi offset
+#define SX127X_RSSI_OFFSET_LF                   164         // low band frequency RSSI offset
+#define SX127X_RSSI_OFFSET_HF                   157         // high band frequency RSSI offset
+#define SX1272_RSSI_OFFSET                      139         // frequency RSSI offset for SX1272
+#define SX127X_BAND_THRESHOLD                   525E6       // threshold between low and high band frequency
+
 // TX and RX operation status
 #define SX127X_STATUS_DEFAULT                   LORA_STATUS_DEFAULT
 #define SX127X_STATUS_TX_WAIT                   LORA_STATUS_TX_WAIT
@@ -123,6 +129,17 @@ class SX127x : public BaseLoRa
         void write(uint8_t data);
         void write(uint8_t* data, uint8_t length);
         void write(char* data, uint8_t length);
+        template <typename T> void put(T data)
+        {
+            const uint8_t length = sizeof(T);
+            union conv{
+                T Data;
+                uint8_t Binary[length];
+            };
+            union conv u;
+            u.Data = data;
+            write(u.Binary, length);
+        }
 
         // Receive related methods
         void request();
@@ -131,10 +148,27 @@ class SX127x : public BaseLoRa
         uint8_t read(uint8_t* data, uint8_t length);
         uint8_t read(char* data, uint8_t length);
         void purge(uint8_t length=0);
+        template <typename T> uint8_t get(T &data)
+        {
+            const uint8_t length = sizeof(T);
+            union conv{
+                T Data;
+                uint8_t Binary[length];
+            };
+            union conv u;
+            uint8_t len = read(u.Binary, length);
+            data = u.Data;
+            return len;
+        }
 
         // Wait, operation status, and packet status methods
         bool wait(uint32_t timeout=0);
         uint8_t status();
+        uint32_t transmitTime();
+        float dataRate();
+        int16_t packetRssi();
+        int16_t rssi();
+        float snr();
 
         // Utilities
         static void writeBits(uint8_t address, uint8_t data, uint8_t position, uint8_t length);
