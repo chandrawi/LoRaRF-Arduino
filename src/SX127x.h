@@ -55,6 +55,24 @@
 #define SX127X_MODE_RX_SINGLE                   0x06        // single receive
 #define SX127X_MODE_CAD                         0x07        // channel activity detection (CAD)
 
+// TX power options
+#define SX127X_PIN_RFO                          0x00        // output power is limited to +14 dBm
+#define SX127X_PIN_PA_BOOST                     0x80        // output power is limited to +20 dBm
+
+// RX gain options
+#define SX127X_RX_GAIN_AUTO                     0x00        // option enable auto gain controller (AGC)
+
+// Header type
+#define SX127X_HEADER_EXPLICIT                  0x00        // explicit header mode
+#define SX127X_HEADER_IMPLICIT                  0x01        // implicit header mode
+
+// LoRa syncword
+#define SX127X_SYNCWORD_LORAWAN                 0x34        // reserved LoRaWAN syncword
+
+// Oscillator options
+#define SX127x_OSC_CRYSTAL                      0x00        // crystal oscillator with external crystal
+#define SX127X_OSC_TCXO                         0x10        // external clipped sine TCXO AC-connected to XTA pin
+
 // IRQ flags
 #define SX127X_IRQ_CAD_DETECTED                 0x01        // Valid Lora signal detected during CAD operation
 #define SX127X_IRQ_FHSS_CHANGE                  0x02        // FHSS change channel interrupt
@@ -118,10 +136,26 @@ class SX127x : public BaseLoRa
         // Hardware configuration methods
         void setSPI(SPIClass &SpiObject, uint32_t frequency=SX127X_SPI_FREQUENCY);
         void setPins(int8_t nss, int8_t reset, int8_t irq=-1, int8_t txen=-1, int8_t rxen=-1);
+        void setCurrentProtection(uint8_t current);
+        void setOscillator(uint8_t option);
 
         // Modem, modulation parameter, and packet parameter setup methods
         void setModem(uint8_t modem=SX127X_LORA_MODEM);
         void setFrequency(uint32_t frequency);
+        void setTxPower(uint8_t txPower, uint8_t paPin=SX127X_PIN_RFO);
+        void setRxGain(uint8_t rxGain, bool boost=false);
+        void setLoRaModulation(uint8_t sf, uint32_t bw, uint8_t cr, bool ldro=false);
+        void setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t payloadLength, bool crcType=true, bool invertIq=false);
+        void setSpreadingFactor(uint8_t sf);
+        void setBandwidth(uint32_t bw);
+        void setCodeRate(uint8_t cr);
+        void setLdro(bool ldro=true);
+        void setHeaderType(uint8_t headerType);
+        void setPreambleLength(uint16_t preambleLength);
+        void setPayloadLength(uint8_t payloadLength);
+        void setCrcType(bool crcType=true);
+        void setInvertIq(bool invertIq=false);
+        void setSyncWord(uint8_t syncWord);
 
         // Transmit related methods
         void beginPacket();
@@ -181,13 +215,8 @@ class SX127x : public BaseLoRa
         uint32_t _frequency;
         uint8_t _sf;
         uint32_t _bw;
-        uint8_t _cr;
-        bool _ldro;
         uint8_t _headerType;
-        uint16_t _preambleLength;
         uint8_t _payloadLength;
-        bool _crcType;
-        bool _invertIq;
 
     private:
 

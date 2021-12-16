@@ -108,6 +108,25 @@ void SX127x::setPins(int8_t nss, int8_t reset, int8_t irq, int8_t txen, int8_t r
     _rxen = rxen;
 }
 
+void SX127x::setCurrentProtection(uint8_t current)
+{
+    // calculate ocp trim
+    uint8_t ocpTrim = 27;
+    if (current <= 120) {
+        ocpTrim = (current - 45) / 5;
+    } else if (current <=240) {
+        ocpTrim = (current + 30) / 10;
+    }
+    // set over current protection config
+    writeRegister(SX127X_REG_OCP, 0x20 | ocpTrim);
+}
+
+void SX127x::setOscillator(uint8_t option)
+{
+    uint8_t cfg = option == SX127X_OSC_TCXO ? SX127X_OSC_TCXO : SX127x_OSC_CRYSTAL;
+    writeRegister(SX127X_REG_TCXO, cfg);
+}
+
 void SX127x::setModem(uint8_t modem)
 {
     _modem = modem;
@@ -123,6 +142,160 @@ void SX127x::setFrequency(uint32_t frequency)
     writeRegister(SX127X_REG_FRF_MSB, (uint8_t) (frf >> 16));
     writeRegister(SX127X_REG_FRF_MID, (uint8_t) (frf >> 8));
     writeRegister(SX127X_REG_FRF_LSB, (uint8_t) frf);
+}
+
+void SX127x::setTxPower(uint8_t txPower, uint8_t paPin)
+{
+    // maximum TX power is 20 dBm and 14 dBm for RFO pin
+    if (txPower > 20) txPower = 20;
+    else if (txPower > 14 && paPin == SX127X_PIN_RFO) txPower = 14;
+
+    uint8_t paConfig, outputPower;
+    if (paPin == SX127X_PIN_RFO) {
+        // txPower = Pmax - (15 - outputPower)
+        if (txPower == 14) {
+            // max power (Pmax) 14.4 dBm
+            paConfig = 0x60;
+            outputPower = txPower + 1;
+        } else {
+            // max power (Pmax) 13.2 dBm
+            paConfig = 0x40;
+            outputPower = txPower + 2;
+        }
+    } else {
+        paConfig = 0xC0;
+        uint8_t paDac = 0x04;
+        // txPower = 17 - (15 - outputPower)
+        if (txPower > 17) {
+            outputPower = 15;
+            paDac = 0x07;
+            setCurrentProtection(100);  // max current 100 mA
+        } else {
+            if (txPower < 2) txPower = 2;
+            outputPower = txPower - 2;
+            setCurrentProtection(140);  // max current 140 mA
+        }
+        // enable or disable +20 dBm option on PA_BOOST pin
+        writeRegister(SX127X_REG_PA_DAC, paDac);
+    }
+    // set PA config
+    writeRegister(SX127X_REG_PA_CONFIG, paConfig | outputPower);
+}
+
+void SX127x::setRxGain(uint8_t rxGain, bool boost)
+{
+    // valid RX gain level 0 - 6 (0 -> AGC on)
+    if (rxGain > 6) rxGain = 6;
+    // boost LNA and automatic gain controller config
+    uint8_t LnaBoostHf = boost ? 0x03 : 0x00;
+    uint8_t AgcOn = rxGain == SX127X_RX_GAIN_AUTO ? 0x01 : 0x00;
+    // set gain and boost LNA config
+    writeRegister(SX127X_REG_LNA, LnaBoostHf | (rxGain << 5));
+    // enable or disable AGC
+    writeBits(SX127X_REG_MODEM_CONFIG_3, AgcOn, 2, 1);
+}
+
+void SX127x::setLoRaModulation(uint8_t sf, uint32_t bw, uint8_t cr, bool ldro)
+{
+    setSpreadingFactor(sf);
+    setBandwidth(bw);
+    setCodeRate(cr);
+    setLdro(ldro);
+}
+
+void SX127x::setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t payloadLength, bool crcType, bool invertIq)
+{
+    setHeaderType(headerType);
+    setPreambleLength(preambleLength);
+    setPayloadLength(payloadLength);
+    setCrcType(crcType);
+    setInvertIq(invertIq);
+}
+
+void SX127x::setSpreadingFactor(uint8_t sf)
+{
+    _sf = sf;
+    // valid spreading factor is 6 - 12
+    if (sf < 6) sf = 6;
+    else if (sf > 12) sf = 12;
+    // set appropriate signal detection optimize and threshold
+    uint8_t optimize = sf == 6 ? 0x05 : 0x03;
+    uint8_t threshold = sf == 6 ? 0x0C : 0x0A;
+    writeRegister(SX127X_REG_DETECTION_OPTIMIZE, optimize);
+    writeRegister(SX127X_REG_DETECTION_THRESHOLD, threshold);
+    // set spreading factor config
+    writeBits(SX127X_REG_MODEM_CONFIG_2, sf, 4, 4);
+}
+
+void SX127x::setBandwidth(uint32_t bw)
+{
+    _bw = bw;
+    uint8_t bwCfg;
+    if (bw < 9100) bwCfg = 0;           // 7.8 kHz
+    else if (bw < 13000) bwCfg = 1;     // 10.4 kHz
+    else if (bw < 18200) bwCfg = 2;     // 15.6 kHz
+    else if (bw < 26000) bwCfg = 3;     // 20.8 kHz
+    else if (bw < 36500) bwCfg = 4;     // 31.25 kHz
+    else if (bw < 52100) bwCfg = 5;     // 41.7 kHz
+    else if (bw < 93800) bwCfg = 6;     // 62.5 kHz
+    else if (bw < 187500) bwCfg = 7;    // 125 kHz
+    else if (bw < 375000) bwCfg = 8;    // 250 kHz
+    else bwCfg = 9;                     // 500 kHz
+    writeBits(SX127X_REG_MODEM_CONFIG_1, bwCfg, 4, 4);
+}
+
+void SX127x::setCodeRate(uint8_t cr)
+{
+    // valid code rate denominator is 5 - 8
+    if (cr < 5) cr = 6;
+    else if (cr > 8) cr = 8;
+    uint8_t crCfg = cr - 4;
+    writeBits(SX127X_REG_MODEM_CONFIG_1, crCfg, 1, 3);
+}
+
+void SX127x::setLdro(bool ldro)
+{
+    uint8_t ldroCfg = ldro ? 0x01 : 0x00;
+    writeBits(SX127X_REG_MODEM_CONFIG_3, ldroCfg, 3, 1);
+}
+
+void SX127x::setHeaderType(uint8_t headerType)
+{
+    _headerType = headerType;
+    uint8_t headerTypeCfg = headerType == SX127X_HEADER_IMPLICIT ? SX127X_HEADER_IMPLICIT : SX127X_HEADER_EXPLICIT;
+    writeBits(SX127X_REG_MODEM_CONFIG_1, headerTypeCfg, 0, 1);
+}
+
+void SX127x::setPreambleLength(uint16_t preambleLength)
+{
+    writeRegister(SX127X_REG_PREAMBLE_MSB, (uint8_t) (preambleLength >> 8));
+    writeRegister(SX127X_REG_PREAMBLE_LSB, (uint8_t) preambleLength);
+}
+
+void SX127x::setPayloadLength(uint8_t payloadLength)
+{
+    _payloadLength = payloadLength;
+    writeRegister(SX127X_REG_PAYLOAD_LENGTH, payloadLength);
+}
+
+void SX127x::setCrcType(bool crcType)
+{
+    uint8_t crcTypeCfg = crcType ? 0x01 : 0x00;
+    writeBits(SX127X_REG_MODEM_CONFIG_2, crcTypeCfg, 2, 1);
+}
+
+void SX127x::setInvertIq(bool invertIq)
+{
+    uint8_t invertIqCfg1 = invertIq ? 0x01 : 0x00;
+    uint8_t invertIqCfg2 = invertIq ? 0x19 : 0x1D;
+    writeBits(SX127X_REG_INVERTIQ, invertIqCfg1, 0, 1);
+    writeBits(SX127X_REG_INVERTIQ, invertIqCfg1, 6, 1);
+    writeRegister(SX127X_REG_INVERTIQ2, invertIqCfg2);
+}
+
+void SX127x::setSyncWord(uint8_t syncWord)
+{
+    writeRegister(SX127X_REG_SYNC_WORD, syncWord);
 }
 
 void SX127x::beginPacket()
