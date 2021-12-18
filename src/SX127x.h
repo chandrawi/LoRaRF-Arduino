@@ -24,6 +24,7 @@
 #define SX127X_REG_RSSI_VALUE                   0x1B
 #define SX127X_REG_MODEM_CONFIG_1               0x1D
 #define SX127X_REG_MODEM_CONFIG_2               0x1E
+#define SX127X_REG_SYMB_TIMEOUT                 0x1F
 #define SX127X_REG_PREAMBLE_MSB                 0x20
 #define SX127X_REG_PREAMBLE_LSB                 0x21
 #define SX127X_REG_PAYLOAD_LENGTH               0x22
@@ -54,6 +55,10 @@
 #define SX127X_MODE_RX_CONTINUOUS               0x05        // continuous receive
 #define SX127X_MODE_RX_SINGLE                   0x06        // single receive
 #define SX127X_MODE_CAD                         0x07        // channel activity detection (CAD)
+
+// Rx operation mode
+#define SX127X_RX_SINGLE                         0x000000    // Rx timeout duration: no timeout (Rx single mode)
+#define SX127X_RX_CONTINUOUS                     0xFFFFFF    //                      infinite (Rx continuous mode)
 
 // TX power options
 #define SX127X_PIN_RFO                          0x00        // output power is limited to +14 dBm
@@ -176,7 +181,7 @@ class SX127x : public BaseLoRa
         }
 
         // Receive related methods
-        void request();
+        void request(uint32_t timeout=SX127X_RX_SINGLE);
         uint8_t available();
         uint8_t read();
         uint8_t read(uint8_t* data, uint8_t length);
@@ -213,8 +218,8 @@ class SX127x : public BaseLoRa
 
         uint8_t _modem;
         uint32_t _frequency;
-        uint8_t _sf;
-        uint32_t _bw;
+        uint8_t _sf = 7;
+        uint32_t _bw = 125000;
         uint8_t _headerType;
         uint8_t _payloadLength;
 

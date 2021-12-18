@@ -34,6 +34,9 @@ bool SX127x::begin()
 
     // set modem to LoRa
     setModem(SX127X_LORA_MODEM);
+    // set tx power and rx gain
+    setTxPower(17, SX127X_PIN_PA_BOOST);
+    setRxGain(SX127X_RX_GAIN_AUTO, true);
     return true;
 }
 
@@ -323,7 +326,7 @@ void SX127x::endPacket()
 
     // set status to TX wait
     _statusWait = SX127X_STATUS_TX_WAIT;
-    _statusIrq = 0x0000;
+    _statusIrq = 0x00;
 
     // set device to transmit mode
     writeRegister(SX127X_REG_OP_MODE, _modem | SX127X_MODE_TX);
@@ -354,7 +357,7 @@ void SX127x::write(char* data, uint8_t length)
     write(data_, length);
 }
 
-void SX127x::request()
+void SX127x::request(uint32_t timeout)
 {
     // clear IRQ flag from last TX or RX operation
     writeRegister(SX127X_REG_IRQ_FLAGS, 0xFF);
@@ -368,10 +371,23 @@ void SX127x::request()
 
     // set status to RX wait
     _statusWait = SX127X_STATUS_RX_WAIT;
-    _statusIrq = 0x0000;
+    _statusIrq = 0x00;
+    // select RX mode to RX continuous mode for RX single and continuos operation
+    uint8_t rxMode = SX127X_MODE_RX_CONTINUOUS;
+    if (timeout == SX127X_RX_CONTINUOUS) {
+        _statusWait = SX127X_STATUS_RX_CONTINUOUS_WAIT;
+    } else if (timeout > 0) {
+        // Select RX mode to single mode for RX operation with timeout
+        rxMode = SX127X_MODE_RX_SINGLE;
+        // calculate and set symbol timeout
+        uint16_t symbTimeout = (timeout * _bw / 1000) >> _sf; // devided by 1000, ms to s
+        symbTimeout = symbTimeout < 0x03FF ? symbTimeout : 0x03FF;
+        writeBits(SX127X_REG_MODEM_CONFIG_2, (symbTimeout >> 8) & 0x03, 0, 2);
+        writeRegister(SX127X_REG_SYMB_TIMEOUT, symbTimeout);
+    }
 
     // set device to receive mode
-    writeRegister(SX127X_REG_OP_MODE, _modem | SX127X_MODE_RX_CONTINUOUS);
+    writeRegister(SX127X_REG_OP_MODE, _modem | rxMode);
 }
 
 uint8_t SX127x::available()
@@ -425,7 +441,10 @@ bool SX127x::wait(uint32_t timeout)
 
     // wait transmit or receive process finish by checking IRQ status
     uint8_t irqFlag = 0x00;
-    uint8_t irqFlagMask = _statusWait == SX127X_STATUS_TX_WAIT ? SX127X_IRQ_TX_DONE : SX127X_IRQ_RX_DONE | SX127X_IRQ_CRC_ERR;
+    uint8_t irqFlagMask = _statusWait == SX127X_STATUS_TX_WAIT 
+        ? SX127X_IRQ_TX_DONE 
+        : SX127X_IRQ_RX_DONE | SX127X_IRQ_RX_TIMEOUT | SX127X_IRQ_CRC_ERR
+    ;
     uint32_t t = millis();
     while (!(irqFlag & irqFlagMask)) {
         irqFlag = readRegister(SX127X_REG_IRQ_FLAGS);
@@ -447,6 +466,12 @@ bool SX127x::wait(uint32_t timeout)
         // set back rxen pin to low
         if (_rxen != -1) digitalWrite(_rxen, LOW);
 
+    } else if (_statusWait == SX127X_STATUS_RX_CONTINUOUS_WAIT) {
+        // set pointer to RX buffer base address and get packet payload length
+        writeRegister(SX127X_REG_FIFO_ADDR_PTR, readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR));
+        _payloadTxRx = readRegister(SX127X_REG_RX_NB_BYTES);
+        // clear IRQ flag
+        writeRegister(SX127X_REG_IRQ_FLAGS, 0xFF);
     }
 
     // store IRQ status
@@ -456,12 +481,18 @@ bool SX127x::wait(uint32_t timeout)
 
 uint8_t SX127x::status()
 {
+    // set back status IRQ for RX continuous operation
+    uint8_t statusIrq = _statusIrq;
+    if (_statusWait == SX127X_STATUS_RX_CONTINUOUS_WAIT) {
+        _statusIrq = 0x00;
+    }
+
     // get status for transmit and receive operation based on status IRQ
-    if (_statusIrq & SX127X_IRQ_RX_TIMEOUT) return SX127X_STATUS_TX_TIMEOUT;
-    else if (!(_statusIrq & SX127X_IRQ_HEADER_VALID)) return SX127X_STATUS_HEADER_ERR;
-    else if (_statusIrq & SX127X_IRQ_CRC_ERR) return SX127X_STATUS_CRC_ERR;
-    else if (_statusIrq & SX127X_IRQ_TX_DONE) return SX127X_STATUS_TX_DONE;
-    else if (_statusIrq & SX127X_IRQ_RX_DONE) return SX127X_STATUS_RX_DONE;
+    if (statusIrq & SX127X_IRQ_RX_TIMEOUT) return SX127X_STATUS_RX_TIMEOUT;
+    else if (!(statusIrq & SX127X_IRQ_HEADER_VALID)) return SX127X_STATUS_HEADER_ERR;
+    else if (statusIrq & SX127X_IRQ_CRC_ERR) return SX127X_STATUS_CRC_ERR;
+    else if (statusIrq & SX127X_IRQ_TX_DONE) return SX127X_STATUS_TX_DONE;
+    else if (statusIrq & SX127X_IRQ_RX_DONE) return SX127X_STATUS_RX_DONE;
 
     // return TX or RX wait status
     return _statusWait;
