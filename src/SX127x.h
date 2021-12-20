@@ -78,6 +78,11 @@
 #define SX127x_OSC_CRYSTAL                      0x00        // crystal oscillator with external crystal
 #define SX127X_OSC_TCXO                         0x10        // external clipped sine TCXO AC-connected to XTA pin
 
+// DIO mapping
+#define SX127X_DIO0_RX_DONE                      0x00        // set DIO0 interrupt for: RX done
+#define SX127X_DIO0_TX_DONE                      0x40        //                         TX done
+#define SX127X_DIO0_CAD_DONE                     0x80        //                         CAD done
+
 // IRQ flags
 #define SX127X_IRQ_CAD_DETECTED                 0x01        // Valid Lora signal detected during CAD operation
 #define SX127X_IRQ_FHSS_CHANGE                  0x02        // FHSS change channel interrupt
@@ -108,9 +113,6 @@
 #define SX127X_STATUS_CAD_WAIT                  LORA_STATUS_CAD_WAIT
 #define SX127X_STATUS_CAD_DETECTED              LORA_STATUS_CAD_DETECTED
 #define SX127X_STATUS_CAD_DONE                  LORA_STATUS_CAD_DONE
-#define SX126X_STATUS_INT_WAIT                  LORA_STATUS_INT_WAIT
-#define SX126X_STATUS_INT_TX                    LORA_STATUS_INT_TX
-#define SX126X_STATUS_INT_RX                    LORA_STATUS_INT_RX
 
 // Default Hardware Configuration
 #define SX127X_PIN_NSS                          10
@@ -164,7 +166,7 @@ class SX127x : public BaseLoRa
 
         // Transmit related methods
         void beginPacket();
-        void endPacket();
+        void endPacket(bool intFlag=true);
         void write(uint8_t data);
         void write(uint8_t* data, uint8_t length);
         void write(char* data, uint8_t length);
@@ -181,7 +183,7 @@ class SX127x : public BaseLoRa
         }
 
         // Receive related methods
-        void request(uint32_t timeout=SX127X_RX_SINGLE);
+        void request(uint32_t timeout=SX127X_RX_SINGLE, bool intFlag=true);
         uint8_t available();
         uint8_t read();
         uint8_t read(uint8_t* data, uint8_t length);
@@ -237,6 +239,9 @@ class SX127x : public BaseLoRa
         static int8_t _irqStatic;
         static int8_t _pinToLow;
 
+        static void _interruptTx();
+        static void _interruptRx();
+        static void _interruptRxContinuous();
         static uint8_t _transfer(uint8_t address, uint8_t data);
 
 };
