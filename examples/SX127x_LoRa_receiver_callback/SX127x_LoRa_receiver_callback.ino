@@ -1,6 +1,6 @@
-#include <SX126x.h>
+#include <SX127x.h>
 
-SX126x LoRa;
+SX127x LoRa;
 
 // receive data length and pointer
 const uint8_t packetLength = 15;
@@ -12,46 +12,41 @@ void setup() {
   // Begin serial communication
   Serial.begin(38400);
 
-  // Begin LoRa radio and set NSS, reset, busy, txen, and rxen pin with connected arduino pins
+  // Begin LoRa radio and set NSS, reset, txen, and rxen pin with connected arduino pins
   Serial.println("Begin LoRa radio");
-  int8_t nssPin = 10, resetPin = 9, busyPin = 4, irqPin = 2, txenPin = 8, rxenPin = 7;
-  if (!LoRa.begin(nssPin, resetPin, busyPin, irqPin, txenPin, rxenPin)){
+  int8_t nssPin = 10, resetPin = 9, irqPin = 2, txenPin = 8, rxenPin = 7;
+  if (!LoRa.begin(nssPin, resetPin, irqPin, txenPin, rxenPin)){
     Serial.println("Something wrong, can't begin LoRa radio");
     while(1);
   }
 
-  // Configure TCXO used in RF module
-  Serial.println("Set RF module to use TCXO as clock reference");
-  uint8_t dio3Voltage = SX126X_DIO3_OUTPUT_1_8;
-  uint32_t tcxoDelay = SX126X_TCXO_DELAY_10;
-  LoRa.setDio3TcxoCtrl(dio3Voltage, tcxoDelay);
-  
   // Set frequency to 915 Mhz
   Serial.println("Set frequency to 915 Mhz");
-  LoRa.setFrequency(915000000);
+  LoRa.setFrequency(915E6);
 
-  // Set RX gain
+  // Set RX gain. RX gain option are power saving gain or boosted gain 
   Serial.println("Set RX gain to power saving gain");
-  LoRa.setRxGain(SX126X_RX_GAIN_POWER_SAVING);
+  LoRa.setRxGain(SX127X_RX_GAIN_AUTO, false);
 
   // Configure modulation parameter including spreading factor (SF), bandwidth (BW), and coding rate (CR)
+  // Transmitter must have same SF and BW setting so receiver can receive LoRa packet
   Serial.println("Set modulation parameters:\n\tSpreading factor = 7\n\tBandwidth = 125 kHz\n\tCoding rate = 4/5");
-  uint8_t sf = 7;
-  uint8_t bw = SX126X_LORA_BW_125;
-  uint8_t cr = SX126X_LORA_CR_4_5;
-  LoRa.setLoRaModulation(sf, bw, cr);
+  LoRa.setSpreadingFactor(7);
+  LoRa.setBandwidth(125000);
+  LoRa.setCodeRate(5);
 
   // Configure packet parameter including header type, preamble length, payload length, and CRC type
+  // The explicit packet includes header contain CR, number of byte, and CRC type
+  // Packet with explicit header can't be received by receiver with implicit header mode
   Serial.println("Set packet parameters:\n\tExplicit header type\n\tPreamble length = 12\n\tPayload Length = 15\n\tCRC on");
-  uint8_t headerType = SX126X_LORA_HEADER_EXPLICIT;
-  uint16_t preambleLength = 12;
-  uint8_t payloadLength = 15;
-  uint8_t crcType = SX126X_LORA_CRC_ON;
-  LoRa.setLoRaPacket(headerType, preambleLength, payloadLength, crcType);
+  LoRa.setHeaderType(SX127X_HEADER_EXPLICIT);
+  LoRa.setPreambleLength(12);
+  LoRa.setPayloadLength(15);
+  LoRa.setCrcType(true);
 
   // Set syncronize word for public network (0x3444)
   Serial.println("Set syncronize word to 0x3444");
-  LoRa.setLoRaSyncWord(0x3444);
+  LoRa.setSyncWord(0x34);
 
   Serial.println("\n-- LoRa RECEIVER CALLBACK --\n");
 
@@ -59,7 +54,7 @@ void setup() {
   LoRa.onReceive(getReceiveData);
 
   // Begin request LoRa packet in continuous mode
-  LoRa.request(SX126X_RX_MODE_CONTINUOUS);
+  LoRa.request(SX127X_RX_CONTINUOUS);
 }
 
 void loop() {
@@ -72,7 +67,7 @@ void loop() {
 
     // Print packet/signal status including RSSI, SNR, and signalRSSI
     Serial.print("Packet status: RSSI = ");
-    Serial.print(LoRa.rssi());
+    Serial.print(LoRa.packetRssi());
     Serial.print(" dBm | SNR = ");
     Serial.print(LoRa.snr());
     Serial.println(" dB");
