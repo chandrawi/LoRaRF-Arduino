@@ -181,6 +181,7 @@ class SX127x : public BaseLoRa
             u.Data = data;
             write(u.Binary, length);
         }
+        void onTransmit(void(&callback)());
 
         // Receive related methods
         void request(uint32_t timeout=SX127X_RX_SINGLE, bool intFlag=true);
@@ -201,6 +202,7 @@ class SX127x : public BaseLoRa
             data = u.Data;
             return len;
         }
+        void onReceive(void(&callback)());
 
         // Wait, operation status, and packet status methods
         bool wait(uint32_t timeout=0);
@@ -224,6 +226,8 @@ class SX127x : public BaseLoRa
         uint32_t _bw = 125000;
         uint8_t _headerType;
         uint8_t _payloadLength;
+        static void (*_onTransmit)();
+        static void (*_onReceive)();
 
     private:
 

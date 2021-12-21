@@ -6,6 +6,10 @@ uint32_t SX127x::_spiFrequency = SX127X_SPI_FREQUENCY;
 
 int8_t SX127x::_nssStatic = SX127X_PIN_NSS;
 
+void (*SX127x::_onTransmit)();
+
+void (*SX127x::_onReceive)();
+
 uint8_t SX127x::_statusIrq = 0xFF;
 
 uint32_t SX127x::_transmitTime = 0;
@@ -573,6 +577,11 @@ void SX127x::_interruptTx()
     // set back txen pin to low and detach interrupt
     if (_pinToLow != -1) digitalWrite(_pinToLow, LOW);
     detachInterrupt(_irqStatic);
+
+    // call onTransmit function
+    if (_onTransmit) {
+        _onTransmit();
+    }
 }
 
 void SX127x::_interruptRx()
@@ -592,6 +601,11 @@ void SX127x::_interruptRx()
     // set pointer to RX buffer base address and get packet payload length
     writeRegister(SX127X_REG_FIFO_ADDR_PTR, readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR));
     _payloadTxRx = readRegister(SX127X_REG_RX_NB_BYTES);
+
+    // call onReceive function
+    if (_onReceive) {
+        _onReceive();
+    }
 }
 
 void SX127x::_interruptRxContinuous()
@@ -607,6 +621,23 @@ void SX127x::_interruptRxContinuous()
     // set pointer to RX buffer base address and get packet payload length
     writeRegister(SX127X_REG_FIFO_ADDR_PTR, readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR));
     _payloadTxRx = readRegister(SX127X_REG_RX_NB_BYTES);
+
+    // call onReceive function
+    if (_onReceive) {
+        _onReceive();
+    }
+}
+
+void SX127x::onTransmit(void(&callback)())
+{
+    // register onTransmit function to call every transmit done
+    _onTransmit = &callback;
+}
+
+void SX127x::onReceive(void(&callback)())
+{
+    // register onReceive function to call every receive done
+    _onReceive = &callback;
 }
 
 void SX127x::writeBits(uint8_t address, uint8_t data, uint8_t position, uint8_t length)
