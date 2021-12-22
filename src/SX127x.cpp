@@ -310,12 +310,8 @@ void SX127x::setSyncWord(uint8_t syncWord)
 
 void SX127x::beginPacket()
 {
-    // clear IRQ flag from last TX or RX operation
-    writeRegister(SX127X_REG_IRQ_FLAGS, 0xFF);
-
     // reset TX buffer base address, FIFO address pointer and payload length
-    writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, 0);
-    writeRegister(SX127X_REG_FIFO_ADDR_PTR, 0);
+    writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, readRegister(SX127X_REG_FIFO_ADDR_PTR));
     _payloadTxRx = 0;
 
     // set txen pin to high and rxen pin to low
@@ -326,8 +322,14 @@ void SX127x::beginPacket()
     }
 }
 
-void SX127x::endPacket(bool intFlag)
+bool SX127x::endPacket(bool intFlag)
 {
+    // skip to enter TX mode when previous TX operation incomplete
+    if (readRegister(SX127X_REG_OP_MODE) & 0x07 == SX127X_MODE_TX) return false;
+
+    // clear IRQ flag from last TX or RX operation
+    writeRegister(SX127X_REG_IRQ_FLAGS, 0xFF);
+
     // set packet payload length
     writeRegister(SX127X_REG_PAYLOAD_LENGTH, _payloadTxRx);
 
@@ -344,6 +346,7 @@ void SX127x::endPacket(bool intFlag)
         writeRegister(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_TX_DONE);
         attachInterrupt(_irqStatic, SX127x::_interruptTx, RISING);
     }
+    return true;
 }
 
 void SX127x::write(uint8_t data)
@@ -369,8 +372,12 @@ void SX127x::write(char* data, uint8_t length)
     write(data_, length);
 }
 
-void SX127x::request(uint32_t timeout, bool intFlag)
+bool SX127x::request(uint32_t timeout, bool intFlag)
 {
+    // skip to enter RX mode when previous RX operation incomplete
+    uint8_t rxMode = readRegister(SX127X_REG_OP_MODE) & 0x07;
+    if (rxMode == SX127X_MODE_RX_SINGLE || rxMode == SX127X_MODE_RX_CONTINUOUS) return false;
+
     // clear IRQ flag from last TX or RX operation
     writeRegister(SX127X_REG_IRQ_FLAGS, 0xFF);
 
@@ -385,7 +392,7 @@ void SX127x::request(uint32_t timeout, bool intFlag)
     _statusWait = SX127X_STATUS_RX_WAIT;
     _statusIrq = 0x00;
     // select RX mode to RX continuous mode for RX single and continuos operation
-    uint8_t rxMode = SX127X_MODE_RX_CONTINUOUS;
+    rxMode = SX127X_MODE_RX_CONTINUOUS;
     if (timeout == SX127X_RX_CONTINUOUS) {
         _statusWait = SX127X_STATUS_RX_CONTINUOUS_WAIT;
     } else if (timeout > 0) {
@@ -410,6 +417,7 @@ void SX127x::request(uint32_t timeout, bool intFlag)
             attachInterrupt(_irqStatic, SX127x::_interruptRx, RISING);
         }
     }
+    return true;
 }
 
 uint8_t SX127x::available()

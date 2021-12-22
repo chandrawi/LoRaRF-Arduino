@@ -4,7 +4,7 @@ void (*SX126x::_onTransmit)();
 
 void (*SX126x::_onReceive)();
 
-uint16_t SX126x::_statusIrq = 0x0000;
+uint16_t SX126x::_statusIrq = 0xFFFF;
 
 uint32_t SX126x::_transmitTime = 0;
 
@@ -126,6 +126,7 @@ void SX126x::setPins(int8_t nss, int8_t reset, int8_t busy, int8_t irq, int8_t t
     _irq = irq;
     _txen = txen;
     _rxen = rxen;
+    _irqStatic = digitalPinToInterrupt(_irq);
 }
 
 void SX126x::setRfIrqPin(int8_t dioPinSelect)
@@ -351,9 +352,6 @@ void SX126x::setFskWhitening(uint16_t whitening)
 
 void SX126x::beginPacket()
 {
-    // clear previous interrupt and set TX done, and TX timeout as interrupt source
-    _irqSetup(SX126X_IRQ_TX_DONE | SX126X_IRQ_TIMEOUT);
-
     // reset payload length and buffer index
     _payloadTxRx = 0;
     SX126x_API::setBufferBaseAddress(_bufferIndex, _bufferIndex + 0xFF);
@@ -368,8 +366,14 @@ void SX126x::beginPacket()
     SX126x_API::fixLoRaBw500(_bw);
 }
 
-void SX126x::endPacket(uint32_t timeout, bool intFlag)
+bool SX126x::endPacket(uint32_t timeout, bool intFlag)
 {
+    // skip to enter TX mode when previous TX operation incomplete
+    if (getMode() == SX126X_STATUS_MODE_TX) return false;
+
+    // clear previous interrupt and set TX done, and TX timeout as interrupt source
+    _irqSetup(SX126X_IRQ_TX_DONE | SX126X_IRQ_TIMEOUT);
+
     // set packet payload length
     setLoRaPacket(_headerType, _preambleLength, _payloadTxRx, _crcType, _invertIq);
 
@@ -386,9 +390,9 @@ void SX126x::endPacket(uint32_t timeout, bool intFlag)
 
     // set operation status to wait and attach TX interrupt handler
     if (_irq != -1 && intFlag) {
-        _irqStatic = digitalPinToInterrupt(_irq);
         attachInterrupt(_irqStatic, SX126x::_interruptTx, RISING);
     }
+    return true;
 }
 
 void SX126x::write(uint8_t data)
@@ -416,8 +420,11 @@ void SX126x::write(char* data, uint8_t length)
     _payloadTxRx += length;
 }
 
-void SX126x::request(uint32_t timeout, bool intFlag)
+bool SX126x::request(uint32_t timeout, bool intFlag)
 {
+    // skip to enter RX mode when previous RX operation incomplete
+    if (getMode() == SX126X_STATUS_MODE_RX) return false;
+
     // clear previous interrupt and set RX done, RX timeout, header error, and CRC error as interrupt source
     _irqSetup(SX126X_IRQ_RX_DONE | SX126X_IRQ_TIMEOUT | SX126X_IRQ_HEADER_ERR | SX126X_IRQ_CRC_ERR);
 
@@ -444,17 +451,20 @@ void SX126x::request(uint32_t timeout, bool intFlag)
 
     // set operation status to wait and attach RX interrupt handler
     if (_irq != -1 && intFlag) {
-        _irqStatic = digitalPinToInterrupt(_irq);
         if (timeout == SX126X_RX_MODE_CONTINUOUS) {
             attachInterrupt(_irqStatic, SX126x::_interruptRxContinuous, RISING);
         } else {
             attachInterrupt(_irqStatic, SX126x::_interruptRx, RISING);
         }
     }
+    return true;
 }
 
-void SX126x::listen(uint32_t rxPeriod, uint32_t sleepPeriod, bool intFlag)
+bool SX126x::listen(uint32_t rxPeriod, uint32_t sleepPeriod, bool intFlag)
 {
+    // skip to enter RX mode when previous RX operation incomplete
+    if (getMode() == SX126X_STATUS_MODE_RX) return false;
+
     // clear previous interrupt and set RX done, RX timeout, header error, and CRC error as interrupt source
     _irqSetup(SX126X_IRQ_RX_DONE | SX126X_IRQ_TIMEOUT | SX126X_IRQ_HEADER_ERR | SX126X_IRQ_CRC_ERR);
 
@@ -479,9 +489,9 @@ void SX126x::listen(uint32_t rxPeriod, uint32_t sleepPeriod, bool intFlag)
 
     // set operation status to wait and attach RX interrupt handler
     if (_irq != -1 && intFlag) {
-        _irqStatic = digitalPinToInterrupt(_irq);
         attachInterrupt(_irqStatic, SX126x::_interruptRx, RISING);
     }
+    return true;
 }
 
 uint8_t SX126x::available()
@@ -546,7 +556,7 @@ uint8_t SX126x::status()
     else if (statusIrq & SX126X_IRQ_RX_DONE) return SX126X_STATUS_RX_DONE;
 
     // return TX or RX wait status
-    return statusIrq;
+    return _statusWait;
 }
 
 bool SX126x::wait(uint32_t timeout)
