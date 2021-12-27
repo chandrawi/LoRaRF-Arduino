@@ -276,34 +276,95 @@ void SX126x::setRxGain(uint8_t rxGain)
     else SX126x_API::writeRegister(SX126X_REG_RX_GAIN, &gain, 1);
 }
 
-void SX126x::setLoRaModulation(uint8_t sf, uint8_t bw, uint8_t cr, uint8_t ldro)
+void SX126x::setLoRaModulation(uint8_t sf, uint32_t bw, uint8_t cr, bool ldro)
 {
     _sf = sf;
     _bw = bw;
     _cr = cr;
     _ldro = ldro;
-    SX126x_API::setModulationParamsLoRa(sf, bw, cr, ldro);
+
+    // valid spreading factor is between 5 and 12
+    if (sf > 12) sf = 12;
+    else if (sf < 5) sf = 5;
+    // select bandwidth options
+    if (bw < 9100) bw = 0x00;           // 7.8 kHz
+    else if (bw < 13000) bw = 0x08;     // 10.4 kHz
+    else if (bw < 18200) bw = 0x01;     // 15.6 kHz
+    else if (bw < 26000) bw = 0x09;     // 20.8 kHz
+    else if (bw < 36500) bw = 0x02;     // 31.25 kHz
+    else if (bw < 52100) bw = 0x0A;     // 41.7 kHz
+    else if (bw < 93800) bw = 0x03;     // 62.5 kHz
+    else if (bw < 187500) bw = 0x04;    // 125 kHz
+    else if (bw < 375000) bw = 0x05;    // 250 kHz
+    else bw = 0x06;                     // 500 kHz
+    // valid code rate denominator is between 4 and 8
+    cr -= 4;
+    if (cr > 4) cr = 0;
+
+    SX126x_API::setModulationParamsLoRa(sf, (uint8_t) bw, cr, (uint8_t) ldro);
 }
 
-void SX126x::setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t payloadLength, uint8_t crcType, uint8_t invertIq)
+void SX126x::setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t payloadLength, bool crcType, bool invertIq)
 {
     _headerType = headerType;
     _preambleLength = preambleLength;
     _payloadLength = payloadLength;
     _crcType = crcType;
     _invertIq = invertIq;
-    SX126x_API::setPacketParamsLoRa(preambleLength, headerType, payloadLength, crcType, invertIq);
-    SX126x_API::fixInvertedIq(_invertIq);
+
+    // filter valid header type config
+    if (headerType > 0x01) headerType = 0x00;
+
+    SX126x_API::setPacketParamsLoRa(preambleLength, headerType, payloadLength, (uint8_t) crcType, (uint8_t) invertIq);
+    SX126x_API::fixInvertedIq((uint8_t) invertIq);
 }
 
-void SX126x::setLoRaPayloadLength(uint8_t payloadLength)
+void SX126x::setSpreadingFactor(uint8_t sf)
 {
-    _payloadLength = payloadLength;
-    SX126x_API::setPacketParamsLoRa(_preambleLength, _headerType, payloadLength, _crcType, _invertIq);
-    SX126x_API::fixInvertedIq(_invertIq);
+    setLoRaModulation(sf, _bw, _cr, _ldro);
 }
 
-void SX126x::setLoRaSyncWord(uint16_t sw)
+void SX126x::setBandwidth(uint32_t bw)
+{
+    setLoRaModulation(_sf, bw, _cr, _ldro);
+}
+
+void SX126x::setCodeRate(uint8_t cr)
+{
+    setLoRaModulation(_sf, _bw, cr, _ldro);
+}
+
+void SX126x::setLdroEnable(bool ldro)
+{
+    setLoRaModulation(_sf, _bw, _cr, ldro);
+}
+
+void SX126x::setHeaderType(uint8_t headerType)
+{
+    setLoRaPacket(headerType, _preambleLength, _payloadLength, _crcType, _invertIq);
+}
+
+void SX126x::setPreambleLength(uint16_t preambleLength)
+{
+    setLoRaPacket(_headerType, preambleLength, _payloadLength, _crcType, _invertIq);
+}
+
+void SX126x::setPayloadLength(uint8_t payloadLength)
+{
+    setLoRaPacket(_headerType, _preambleLength, payloadLength, _crcType, _invertIq);
+}
+
+void SX126x::setCrcEnable(bool crcType)
+{
+    setLoRaPacket(_headerType, _preambleLength, _payloadLength, crcType, _invertIq);
+}
+
+void SX126x::setInvertIq(bool invertIq)
+{
+    setLoRaPacket(_headerType, _preambleLength, _payloadLength, _crcType, invertIq);
+}
+
+void SX126x::setSyncWord(uint16_t sw)
 {
     uint8_t buf[2];
     buf[0] = sw >> 8;
@@ -382,7 +443,7 @@ bool SX126x::endPacket(uint32_t timeout, bool intFlag)
     _statusIrq = 0x0000;
     // calculate TX timeout config
     uint32_t txTimeout = timeout << 6;
-    if (txTimeout > 0x00FFFFFF) txTimeout = SX126X_TX_MODE_SINGLE;
+    if (txTimeout > 0x00FFFFFF) txTimeout = SX126X_TX_SINGLE;
 
     // set device to transmit mode with configured timeout or single operation
     SX126x_API::setTx(txTimeout);
@@ -393,6 +454,10 @@ bool SX126x::endPacket(uint32_t timeout, bool intFlag)
         attachInterrupt(_irqStatic, SX126x::_interruptTx, RISING);
     }
     return true;
+}
+
+bool SX126x::endPacket(bool intFlag){
+    return endPacket(SX126X_TX_SINGLE, intFlag);
 }
 
 void SX126x::write(uint8_t data)
@@ -433,10 +498,10 @@ bool SX126x::request(uint32_t timeout, bool intFlag)
     _statusIrq = 0x0000;
     // calculate RX timeout config
     uint32_t rxTimeout = timeout << 6;
-    if (rxTimeout > 0x00FFFFFF) rxTimeout = SX126X_RX_MODE_SINGLE;
-    if (timeout == SX126X_RX_MODE_CONTINUOUS) {
-        rxTimeout = SX126X_RX_MODE_CONTINUOUS;
-        _statusWait = SX126X_STATUS_RX_CONTINUOUS_WAIT;
+    if (rxTimeout > 0x00FFFFFF) rxTimeout = SX126X_RX_SINGLE;
+    if (timeout == SX126X_RX_CONTINUOUS) {
+        rxTimeout = SX126X_RX_CONTINUOUS;
+        _statusWait = SX126X_STATUS_RX_CONTINUOUS;
     }
 
     // set txen pin to low and rxen pin to high
@@ -451,7 +516,7 @@ bool SX126x::request(uint32_t timeout, bool intFlag)
 
     // set operation status to wait and attach RX interrupt handler
     if (_irq != -1 && intFlag) {
-        if (timeout == SX126X_RX_MODE_CONTINUOUS) {
+        if (timeout == SX126X_RX_CONTINUOUS) {
             attachInterrupt(_irqStatic, SX126x::_interruptRxContinuous, RISING);
         } else {
             attachInterrupt(_irqStatic, SX126x::_interruptRx, RISING);
@@ -530,18 +595,18 @@ uint8_t SX126x::read(char* data, uint8_t length)
     return _payloadTxRx > length ? length : _payloadTxRx;
 }
 
-void SX126x::flush()
+void SX126x::purge(uint8_t length)
 {
-    // reset received payload length and buffer index
-    _bufferIndex += _payloadTxRx;
-    _payloadTxRx = 0;
+    // subtract or reset received payload length
+    _payloadTxRx = (_payloadTxRx > length) && length ? _payloadTxRx - length : 0;
+    _bufferIndex += length;
 }
 
 uint8_t SX126x::status()
 {
     // set back status IRQ for RX continuous operation
     uint16_t statusIrq = _statusIrq;
-    if (_statusWait == SX126X_STATUS_RX_CONTINUOUS_WAIT) {
+    if (_statusWait == SX126X_STATUS_RX_CONTINUOUS) {
         _statusIrq = 0x0000;
     }
 
@@ -585,7 +650,7 @@ bool SX126x::wait(uint32_t timeout)
         SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
         if (_rxen != -1) digitalWrite(_rxen, LOW);
         SX126x_API::fixRxTimeout();
-    } else if (_statusWait == SX126X_STATUS_RX_CONTINUOUS_WAIT) {
+    } else if (_statusWait == SX126X_STATUS_RX_CONTINUOUS) {
         // for receive continuous, get received payload length and buffer index and clear IRQ status
         SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
         SX126x_API::clearIrqStatus(0x03FF);
@@ -608,7 +673,7 @@ float SX126x::dataRate()
     return 1000.0 * _payloadTxRx / _transmitTime;
 }
 
-int16_t SX126x::rssi()
+int16_t SX126x::packetRssi()
 {
     // get relative signal strength index (RSSI) of last incoming package
     uint8_t rssiPkt, snrPkt, signalRssiPkt;

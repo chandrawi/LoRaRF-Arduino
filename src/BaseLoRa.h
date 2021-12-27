@@ -14,7 +14,7 @@
 #define LORA_STATUS_TX_TIMEOUT                      2
 #define LORA_STATUS_TX_DONE                         3
 #define LORA_STATUS_RX_WAIT                         4
-#define LORA_STATUS_RX_CONTINUOUS_WAIT              5
+#define LORA_STATUS_RX_CONTINUOUS                   5
 #define LORA_STATUS_RX_TIMEOUT                      6
 #define LORA_STATUS_RX_DONE                         7
 #define LORA_STATUS_HEADER_ERR                      8

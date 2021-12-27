@@ -133,7 +133,7 @@ void SX127x::setCurrentProtection(uint8_t current)
 
 void SX127x::setOscillator(uint8_t option)
 {
-    uint8_t cfg = option == SX127X_OSC_TCXO ? SX127X_OSC_TCXO : SX127x_OSC_CRYSTAL;
+    uint8_t cfg = option == SX127X_OSC_TCXO ? SX127X_OSC_TCXO : SX127X_OSC_CRYSTAL;
     writeRegister(SX127X_REG_TCXO, cfg);
 }
 
@@ -210,7 +210,7 @@ void SX127x::setLoRaModulation(uint8_t sf, uint32_t bw, uint8_t cr, bool ldro)
     setSpreadingFactor(sf);
     setBandwidth(bw);
     setCodeRate(cr);
-    setLdro(ldro);
+    setLdroEnable(ldro);
 }
 
 void SX127x::setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t payloadLength, bool crcType, bool invertIq)
@@ -218,7 +218,7 @@ void SX127x::setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t 
     setHeaderType(headerType);
     setPreambleLength(preambleLength);
     setPayloadLength(payloadLength);
-    setCrcType(crcType);
+    setCrcEnable(crcType);
     setInvertIq(invertIq);
 }
 
@@ -263,7 +263,7 @@ void SX127x::setCodeRate(uint8_t cr)
     writeBits(SX127X_REG_MODEM_CONFIG_1, crCfg, 1, 3);
 }
 
-void SX127x::setLdro(bool ldro)
+void SX127x::setLdroEnable(bool ldro)
 {
     uint8_t ldroCfg = ldro ? 0x01 : 0x00;
     writeBits(SX127X_REG_MODEM_CONFIG_3, ldroCfg, 3, 1);
@@ -288,7 +288,7 @@ void SX127x::setPayloadLength(uint8_t payloadLength)
     writeRegister(SX127X_REG_PAYLOAD_LENGTH, payloadLength);
 }
 
-void SX127x::setCrcType(bool crcType)
+void SX127x::setCrcEnable(bool crcType)
 {
     uint8_t crcTypeCfg = crcType ? 0x01 : 0x00;
     writeBits(SX127X_REG_MODEM_CONFIG_2, crcTypeCfg, 2, 1);
@@ -320,6 +320,11 @@ void SX127x::beginPacket()
         digitalWrite(_txen, HIGH);
         _pinToLow = _txen;
     }
+}
+
+bool SX127x::endPacket(uint32_t timeout, bool intFlag)
+{
+    return endPacket(intFlag);
 }
 
 bool SX127x::endPacket(bool intFlag)
@@ -394,7 +399,7 @@ bool SX127x::request(uint32_t timeout, bool intFlag)
     // select RX mode to RX continuous mode for RX single and continuos operation
     rxMode = SX127X_MODE_RX_CONTINUOUS;
     if (timeout == SX127X_RX_CONTINUOUS) {
-        _statusWait = SX127X_STATUS_RX_CONTINUOUS_WAIT;
+        _statusWait = SX127X_STATUS_RX_CONTINUOUS;
     } else if (timeout > 0) {
         // Select RX mode to single mode for RX operation with timeout
         rxMode = SX127X_MODE_RX_SINGLE;
@@ -506,7 +511,7 @@ bool SX127x::wait(uint32_t timeout)
         // set back rxen pin to low
         if (_rxen != -1) digitalWrite(_rxen, LOW);
 
-    } else if (_statusWait == SX127X_STATUS_RX_CONTINUOUS_WAIT) {
+    } else if (_statusWait == SX127X_STATUS_RX_CONTINUOUS) {
         // set pointer to RX buffer base address and get packet payload length
         writeRegister(SX127X_REG_FIFO_ADDR_PTR, readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR));
         _payloadTxRx = readRegister(SX127X_REG_RX_NB_BYTES);
@@ -523,7 +528,7 @@ uint8_t SX127x::status()
 {
     // set back status IRQ for RX continuous operation
     uint8_t statusIrq = _statusIrq;
-    if (_statusWait == SX127X_STATUS_RX_CONTINUOUS_WAIT) {
+    if (_statusWait == SX127X_STATUS_RX_CONTINUOUS) {
         _statusIrq = 0x00;
     }
 

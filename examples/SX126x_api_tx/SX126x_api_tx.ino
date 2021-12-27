@@ -52,11 +52,11 @@ void setup() {
 }
 
 void loop() {
-  
+
   // Message to transmit
   char message[] = "HeLoRa World";
   uint8_t nBytes = sizeof(message);
-    
+
   // Transmit message
   uint32_t timeout = 1000; // 1000 ms timeout
   uint16_t status = transmitFunction(message, nBytes, timeout);
@@ -117,7 +117,7 @@ void settingFunction() {
   Serial.println(" dBm");
   Api.setPaConfig(paDutyCycle, hpMax, deviceSel, 0x01);
   Api.setTxParams(power, SX126X_PA_RAMP_200U);
-  
+
   // Configure modulation parameter with predefined spreading factor, bandwidth, coding rate, and low data rate optimize setting
   Serial.println("Set modulation with predefined parameters");
   Api.setModulationParamsLoRa(sf, bw, cr, ldro);
@@ -192,7 +192,7 @@ uint16_t transmitFunction(char* msg, uint8_t len, uint32_t timeout) {
   Serial.println("Clear IRQ status");
   Api.clearIrqStatus(irqStat);
   digitalWrite(txenPin, LOW);
-  
+
   // return interrupt status
   return irqStat;
 

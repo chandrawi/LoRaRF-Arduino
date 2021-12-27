@@ -49,7 +49,7 @@ void setup() {
 }
 
 void loop() {
-  
+
   // Receive message
   char message[20];
   uint8_t msgLen;
@@ -70,7 +70,7 @@ void loop() {
   else if(status & SX126X_IRQ_CRC_ERR){
     Serial.println("CRC error");
   }
-  
+
 }
 
 void checkReceiveDone() {
@@ -145,7 +145,7 @@ uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
 
   // Calculate timeout (timeout duration = timeout * 15.625 us)
   uint32_t tOut = timeout * 64;
-  if (timeout == SX126X_RX_MODE_CONTINUOUS) tOut = SX126X_RX_MODE_CONTINUOUS;
+  if (timeout == SX126X_RX_CONTINUOUS) tOut = SX126X_RX_CONTINUOUS;
   // Set RF module to RX mode to receive message
   Serial.println("Receiving LoRa packet within predefined timeout");
   Api.setRx(tOut);

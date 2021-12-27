@@ -37,21 +37,21 @@ void setup() {
   // Configure modulation parameter including spreading factor (SF), bandwidth (BW), and coding rate (CR)
   Serial.println("Set modulation parameters:\n\tSpreading factor = 7\n\tBandwidth = 125 kHz\n\tCoding rate = 4/5");
   uint8_t sf = 7;
-  uint8_t bw = SX126X_LORA_BW_125;
-  uint8_t cr = SX126X_LORA_CR_4_5;
+  uint32_t bw = 125000;
+  uint8_t cr = 5;
   LoRa.setLoRaModulation(sf, bw, cr);
 
   // Configure packet parameter including header type, preamble length, payload length, and CRC type
   Serial.println("Set packet parameters:\n\tExplicit header type\n\tPreamble length = 12\n\tPayload Length = 15\n\tCRC on");
-  uint8_t headerType = SX126X_LORA_HEADER_EXPLICIT;
+  uint8_t headerType = SX126X_HEADER_EXPLICIT;
   uint16_t preambleLength = 12;
   uint8_t payloadLength = 15;
-  uint8_t crcType = SX126X_LORA_CRC_ON;
+  bool crcType = true;
   LoRa.setLoRaPacket(headerType, preambleLength, payloadLength, crcType);
 
   // Set syncronize word for public network (0x3444)
   Serial.println("Set syncronize word to 0x3444");
-  LoRa.setLoRaSyncWord(0x3444);
+  LoRa.setSyncWord(0x3444);
 
   Serial.println("\n-- LoRa RECEIVER CALLBACK --\n");
 
@@ -59,7 +59,7 @@ void setup() {
   LoRa.onReceive(getReceiveData);
 
   // Begin request LoRa packet in continuous mode
-  LoRa.request(SX126X_RX_MODE_CONTINUOUS);
+  LoRa.request(SX126X_RX_CONTINUOUS);
 }
 
 void loop() {
@@ -70,9 +70,9 @@ void loop() {
     Serial.print("  ");
     Serial.println(packetData[packetLength - 1]);
 
-    // Print packet/signal status including RSSI, SNR, and signalRSSI
+    // Print packet/signal status including package RSSI and SNR
     Serial.print("Packet status: RSSI = ");
-    Serial.print(LoRa.rssi());
+    Serial.print(LoRa.packetRssi());
     Serial.print(" dBm | SNR = ");
     Serial.print(LoRa.snr());
     Serial.println(" dB");

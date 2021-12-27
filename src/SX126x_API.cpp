@@ -397,13 +397,13 @@ void SX126x_API::clearDeviceErrors()
     _readBytes(0x07, buf, 2);
 }
 
-void SX126x_API::fixLoRaBw500(uint8_t bw)
+void SX126x_API::fixLoRaBw500(uint32_t bw)
 {
     uint8_t packetType;
     SX126x_API::getPacketType(&packetType);
     uint8_t value;
     SX126x_API::readRegister(SX126X_REG_TX_MODULATION, &value, 1);
-    if ((packetType == SX126X_LORA_MODEM) && (bw == SX126X_LORA_BW_500)) value &= 0xFB;
+    if ((packetType == SX126X_LORA_MODEM) && (bw == 500000)) value &= 0xFB;
     else value |= 0x04;
     SX126x_API::writeRegister(SX126X_REG_TX_MODULATION, &value, 1);
 }

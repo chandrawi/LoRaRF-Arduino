@@ -43,7 +43,7 @@ void setup() {
   LoRa.setHeaderType(SX127X_HEADER_EXPLICIT);                       // Explicit header mode
   LoRa.setPreambleLength(12);                                       // Set preamble length to 12
   LoRa.setPayloadLength(15);                                        // Initialize payloadLength to 15
-  LoRa.setCrcType(true);                                            // Set CRC enable
+  LoRa.setCrcEnable(true);                                          // Set CRC enable
 
   // Set syncronize word for public network (0x3444)
   Serial.println("Set syncronize word to 0x3444");
@@ -71,7 +71,6 @@ void loop() {
   LoRa.wait();
 
   // Print transmit time
-  // Transmit time show the actual modulation time for transmitting LoRa packet
   Serial.print("Transmit time: ");
   Serial.print(LoRa.transmitTime());
   Serial.println(" ms");

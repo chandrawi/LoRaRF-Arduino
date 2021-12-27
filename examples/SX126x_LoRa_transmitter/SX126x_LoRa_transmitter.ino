@@ -47,23 +47,23 @@ void setup() {
   // Receiver must have same SF and BW setting with transmitter to be able to receive LoRa packet
   Serial.println("Set modulation parameters:\n\tSpreading factor = 7\n\tBandwidth = 125 kHz\n\tCoding rate = 4/5");
   uint8_t sf = 7;                                                     // LoRa spreading factor: 7
-  uint8_t bw = SX126X_LORA_BW_125;                                    // Bandwidth: 125 kHz
-  uint8_t cr = SX126X_LORA_CR_4_5;                                    // Coding rate: 4/5
+  uint32_t bw = 125000;                                               // Bandwidth: 125 kHz
+  uint8_t cr = 5;                                                     // Coding rate: 4/5
   LoRa.setLoRaModulation(sf, bw, cr);
 
   // Configure packet parameter including header type, preamble length, payload length, and CRC type
   // The explicit packet includes header contain CR, number of byte, and CRC type
   // Receiver can receive packet with different CR and packet parameters in explicit header mode
   Serial.println("Set packet parameters:\n\tExplicit header type\n\tPreamble length = 12\n\tPayload Length = 15\n\tCRC on");
-  uint8_t headerType = SX126X_LORA_HEADER_EXPLICIT;                   // Explicit header mode
+  uint8_t headerType = SX126X_HEADER_EXPLICIT;                        // Explicit header mode
   uint16_t preambleLength = 12;                                       // Set preamble length to 12
   uint8_t payloadLength = 15;                                         // Initialize payloadLength to 15
-  uint8_t crcType = SX126X_LORA_CRC_ON;                               // Set CRC enable
+  bool crcType = true;                                                // Set CRC enable
   LoRa.setLoRaPacket(headerType, preambleLength, payloadLength, crcType);
 
   // Set syncronize word for public network (0x3444)
   Serial.println("Set syncronize word to 0x3444");
-  LoRa.setLoRaSyncWord(0x3444);
+  LoRa.setSyncWord(0x3444);
 
   Serial.println("\n-- LORA TRANSMITTER --\n");
   
@@ -86,13 +86,10 @@ void loop() {
   // Wait until modulation process for transmitting packet finish
   LoRa.wait();
 
-  // Print transmit time and data rate
-  // Transmit time show the actual modulation time for transmitting LoRa packet
+  // Print transmit time
   Serial.print("Transmit time: ");
   Serial.print(LoRa.transmitTime());
-  Serial.print(" ms | Data rate: ");
-  Serial.print(LoRa.dataRate());
-  Serial.println(" byte/s");
+  Serial.println(" ms");
   Serial.println();
 
   // Don't load RF module with continous transmit

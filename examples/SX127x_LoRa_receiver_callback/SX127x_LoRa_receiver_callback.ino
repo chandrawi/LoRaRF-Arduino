@@ -42,7 +42,7 @@ void setup() {
   LoRa.setHeaderType(SX127X_HEADER_EXPLICIT);
   LoRa.setPreambleLength(12);
   LoRa.setPayloadLength(15);
-  LoRa.setCrcType(true);
+  LoRa.setCrcEnable(true);
 
   // Set syncronize word for public network (0x3444)
   Serial.println("Set syncronize word to 0x3444");

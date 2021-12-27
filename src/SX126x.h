@@ -10,7 +10,7 @@
 #define SX126X_STATUS_TX_TIMEOUT                      LORA_STATUS_TX_TIMEOUT
 #define SX126X_STATUS_TX_DONE                         LORA_STATUS_TX_DONE
 #define SX126X_STATUS_RX_WAIT                         LORA_STATUS_RX_WAIT
-#define SX126X_STATUS_RX_CONTINUOUS_WAIT              LORA_STATUS_RX_CONTINUOUS_WAIT
+#define SX126X_STATUS_RX_CONTINUOUS                   LORA_STATUS_RX_CONTINUOUS
 #define SX126X_STATUS_RX_TIMEOUT                      LORA_STATUS_RX_TIMEOUT
 #define SX126X_STATUS_RX_DONE                         LORA_STATUS_RX_DONE
 #define SX126X_STATUS_HEADER_ERR                      LORA_STATUS_HEADER_ERR
@@ -61,10 +61,18 @@ class SX126x : public BaseLoRa
         void setFrequency(uint32_t frequency);
         void setTxPower(uint32_t txPower);
         void setRxGain(uint8_t rxGain);
-        void setLoRaModulation(uint8_t sf, uint8_t bw, uint8_t cr, uint8_t ldro=SX126X_LORA_LDRO_OFF);
-        void setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t payloadLength, uint8_t crcType=SX126X_LORA_CRC_ON, uint8_t invertIq=SX126X_LORA_IQ_STANDARD);
-        void setLoRaPayloadLength(uint8_t payloadLength);
-        void setLoRaSyncWord(uint16_t sw);
+        void setLoRaModulation(uint8_t sf, uint32_t bw, uint8_t cr, bool ldro=false);
+        void setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t payloadLength, bool crcType=false, bool invertIq=false);
+        void setSpreadingFactor(uint8_t sf);
+        void setBandwidth(uint32_t bw);
+        void setCodeRate(uint8_t cr);
+        void setLdroEnable(bool ldro=true);
+        void setHeaderType(uint8_t headerType);
+        void setPreambleLength(uint16_t preambleLength);
+        void setPayloadLength(uint8_t payloadLength);
+        void setCrcEnable(bool crcType=true);
+        void setInvertIq(bool invertIq=true);
+        void setSyncWord(uint16_t syncWord);
         void setFskModulation(uint32_t br, uint8_t pulseShape, uint8_t bandwidth, uint32_t Fdev);
         void setFskPacket(uint16_t preambleLength, uint8_t preambleDetector, uint8_t syncWordLength, uint8_t addrComp, uint8_t packetType, uint8_t payloadLength, uint8_t crcType, uint8_t whitening);
         void setFskSyncWord(uint8_t* sw, uint8_t swLen);
@@ -74,7 +82,8 @@ class SX126x : public BaseLoRa
 
         // Transmit related methods
         void beginPacket();
-        bool endPacket(uint32_t timeout=SX126X_TX_MODE_SINGLE, bool intFlag=true);
+        bool endPacket(uint32_t timeout=SX126X_TX_SINGLE, bool intFlag=true);
+        bool endPacket(bool intFlag);
         void write(uint8_t data);
         void write(uint8_t* data, uint8_t length);
         void write(char* data, uint8_t length);
@@ -94,13 +103,13 @@ class SX126x : public BaseLoRa
         void onTransmit(void(&callback)());
 
         // Receive related methods
-        bool request(uint32_t timeout=SX126X_RX_MODE_SINGLE, bool intFlag=true);
+        bool request(uint32_t timeout=SX126X_RX_SINGLE, bool intFlag=true);
         bool listen(uint32_t rxPeriod, uint32_t sleepPeriod, bool intFlag=true);
         uint8_t available();
         uint8_t read();
         uint8_t read(uint8_t* data, uint8_t length);
         uint8_t read(char* data, uint8_t length);
-        void flush();
+        void purge(uint8_t length=0);
         template <typename T> uint8_t get(T &data)
         {
             const uint8_t length = sizeof(T);
@@ -118,11 +127,11 @@ class SX126x : public BaseLoRa
         void onReceive(void(&callback)());
 
         // Wait, operation status, and packet status methods
-        uint8_t status();
         bool wait(uint32_t timeout=0);
+        uint8_t status();
         uint32_t transmitTime();
         float dataRate();
-        int16_t rssi();
+        int16_t packetRssi();
         float snr();
         int16_t signalRssi();
         int16_t rssiInst();
@@ -131,9 +140,15 @@ class SX126x : public BaseLoRa
     protected:
 
         uint8_t _modem;
-        uint8_t _sf, _bw, _cr, _ldro;
-        uint8_t _headerType, _payloadLength, _crcType, _invertIq;
+        uint8_t _sf;
+        uint32_t _bw;
+        uint8_t _cr;
+        bool _ldro;
+        uint8_t _headerType;
         uint16_t _preambleLength;
+        uint8_t _payloadLength;
+        bool _crcType;
+        bool _invertIq;
         static void (*_onTransmit)();
         static void (*_onReceive)();
 
