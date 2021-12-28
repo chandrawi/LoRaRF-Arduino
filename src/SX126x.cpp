@@ -205,66 +205,64 @@ void SX126x::setFrequency(uint32_t frequency)
     SX126x_API::setRfFrequency(rfFreq);
 }
 
-void SX126x::setTxPower(uint32_t txPower)
+void SX126x::setTxPower(uint8_t txPower, uint8_t version)
 {
-    // set output power and ramp time option
-    uint8_t power, ramp;
-    switch (txPower) {
-        case SX126X_TX_POWER_SX1261_15:
-            power = 0x0E;
-            ramp = SX126X_PA_RAMP_200U;
-            break;
-        case SX126X_TX_POWER_SX1261_14:
-            power = 0x0E;
-            ramp = SX126X_PA_RAMP_200U;
-            break;
-        case SX126X_TX_POWER_SX1261_10:
-            power = 0x0D;
-            ramp = SX126X_PA_RAMP_80U;
-            break;
-        case SX126X_TX_POWER_SX1262_22: // also for SX126X_TX_POWER_SX1268_22
-            power = 0x16;
-            ramp = SX126X_PA_RAMP_800U;
-            break;
-        case SX126X_TX_POWER_SX1262_20: // also for SX126X_TX_POWER_SX1268_20
-            power = 0x16;
-            ramp = SX126X_PA_RAMP_800U;
-            break;
-        case SX126X_TX_POWER_SX1262_17: // also for SX126X_TX_POWER_SX1268_17
-            power = 0x16;
-            ramp = SX126X_PA_RAMP_200U;
-            break;
-        case SX126X_TX_POWER_SX1262_14:
-            power = 0x16;
-            ramp = SX126X_PA_RAMP_200U;
-            break;
-        case SX126X_TX_POWER_SX1268_14:
-            power = 0x0F;
-            ramp = SX126X_PA_RAMP_200U;
-            break;
-        case SX126X_TX_POWER_SX1268_10:
-            power = 0x0F;
-            ramp = SX126X_PA_RAMP_80U;
-            break;
-        default: return;
+    // maximum TX power is 22 dBm and 14 dBm for RFO pin
+    if (txPower > 22) txPower = 22;
+    else if (txPower > 15 && version == SX126X_TX_POWER_SX1261) txPower = 15;
+
+    uint8_t paDutyCycle = 0x00;
+    uint8_t hpMax = 0x00;
+    uint8_t deviceSel = version == SX126X_TX_POWER_SX1261 ? 0x01 : 0x00;
+    uint8_t power = 0x0E;
+    // set parameters for PA config and TX params configuration
+    if (txPower == 22) {
+        paDutyCycle = 0x04;
+        hpMax = 0x07;
+        power = 0x16;
+    } else if (txPower >= 20) {
+        paDutyCycle = 0x03;
+        hpMax = 0x05;
+        power = 0x16;
+    } else if (txPower >= 17) {
+        paDutyCycle = 0x02;
+        hpMax = 0x03;
+        power = 0x16;
+    } else if (txPower >= 14 && version == SX126X_TX_POWER_SX1261) {
+        paDutyCycle = 0x04;
+        hpMax = 0x00;
+        power = 0x0E;
+    } else if (txPower >= 14 && version == SX126X_TX_POWER_SX1262) {
+        paDutyCycle = 0x02;
+        hpMax = 0x02;
+        power = 0x16;
+    } else if (txPower >= 14 && version == SX126X_TX_POWER_SX1268) {
+        paDutyCycle = 0x04;
+        hpMax = 0x06;
+        power = 0x0F;
+    } else if (txPower >= 10 && version == SX126X_TX_POWER_SX1261) {
+        paDutyCycle = 0x01;
+        hpMax = 0x00;
+        power = 0x0D;
+    } else if (txPower >= 10 && version == SX126X_TX_POWER_SX1268) {
+        paDutyCycle = 0x00;
+        hpMax = 0x03;
+        power = 0x0F;
+    } else {
+        return;
     }
-    uint8_t paDutyCycle = (txPower >> 16) & 0xFF;
-    uint8_t hpMax = (txPower >> 8) & 0xFF;
-    uint8_t deviceSel = txPower & 0xFF;
-    uint8_t paLut = 0x01;
 
     // set power amplifier and TX power configuration
-    SX126x_API::setPaConfig(paDutyCycle, hpMax, deviceSel, paLut);
-    SX126x_API::setTxParams(power, ramp);
+    SX126x_API::setPaConfig(paDutyCycle, hpMax, deviceSel, 0x01);
+    SX126x_API::setTxParams(power, SX126X_PA_RAMP_800U);
 }
 
-void SX126x::setRxGain(uint8_t rxGain)
+void SX126x::setRxGain(uint8_t boost)
 {
     // set power saving or boosted gain in register
-    uint8_t gain = SX126X_RX_GAIN_POWER_SAVING;
-    if (rxGain == SX126X_RX_GAIN_BOOSTED){
-        gain = SX126X_RX_GAIN_BOOSTED;
-        SX126x_API::writeRegister(SX126X_REG_RX_GAIN, &gain, 1);
+    uint8_t gain = boost ? SX126X_BOOSTED_GAIN : SX126X_POWER_SAVING_GAIN;
+    SX126x_API::writeRegister(SX126X_REG_RX_GAIN, &gain, 1);
+    if (boost){
         // set certain register to retain configuration after wake from sleep mode
         uint8_t value = 0x01;
         SX126x_API::writeRegister(0x029F, &value, 1);
@@ -273,7 +271,6 @@ void SX126x::setRxGain(uint8_t rxGain)
         value = 0xAC;
         SX126x_API::writeRegister(0x02A1, &value, 1);
     }
-    else SX126x_API::writeRegister(SX126X_REG_RX_GAIN, &gain, 1);
 }
 
 void SX126x::setLoRaModulation(uint8_t sf, uint32_t bw, uint8_t cr, bool ldro)

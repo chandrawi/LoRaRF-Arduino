@@ -41,8 +41,8 @@ bool SX127x::begin()
     // set modem to LoRa
     setModem(SX127X_LORA_MODEM);
     // set tx power and rx gain
-    setTxPower(17, SX127X_PIN_PA_BOOST);
-    setRxGain(SX127X_RX_GAIN_AUTO, true);
+    setTxPower(17, SX127X_TX_POWER_PA_BOOST);
+    setRxGain(SX127X_RX_GAIN_BOOSTED, SX127X_RX_GAIN_AUTO);
     return true;
 }
 
@@ -139,9 +139,11 @@ void SX127x::setOscillator(uint8_t option)
 
 void SX127x::setModem(uint8_t modem)
 {
-    _modem = modem;
+    if (modem == SX127X_LORA_MODEM) _modem = SX127X_LONG_RANGE_MODE;
+    else if (modem == SX127X_FSK_MODEM) _modem = SX127X_MODULATION_FSK;
+    else _modem = SX127X_MODULATION_OOK;
     sleep();
-    writeRegister(SX127X_REG_OP_MODE, modem | SX127X_MODE_STDBY);
+    writeRegister(SX127X_REG_OP_MODE, _modem | SX127X_MODE_STDBY);
 }
 
 void SX127x::setFrequency(uint32_t frequency)
@@ -158,10 +160,10 @@ void SX127x::setTxPower(uint8_t txPower, uint8_t paPin)
 {
     // maximum TX power is 20 dBm and 14 dBm for RFO pin
     if (txPower > 20) txPower = 20;
-    else if (txPower > 14 && paPin == SX127X_PIN_RFO) txPower = 14;
+    else if (txPower > 14 && paPin == SX127X_TX_POWER_RFO) txPower = 14;
 
     uint8_t paConfig, outputPower;
-    if (paPin == SX127X_PIN_RFO) {
+    if (paPin == SX127X_TX_POWER_RFO) {
         // txPower = Pmax - (15 - outputPower)
         if (txPower == 14) {
             // max power (Pmax) 14.4 dBm
@@ -192,15 +194,15 @@ void SX127x::setTxPower(uint8_t txPower, uint8_t paPin)
     writeRegister(SX127X_REG_PA_CONFIG, paConfig | outputPower);
 }
 
-void SX127x::setRxGain(uint8_t rxGain, bool boost)
+void SX127x::setRxGain(uint8_t boost, uint8_t level)
 {
     // valid RX gain level 0 - 6 (0 -> AGC on)
-    if (rxGain > 6) rxGain = 6;
+    if (level > 6) level = 6;
     // boost LNA and automatic gain controller config
     uint8_t LnaBoostHf = boost ? 0x03 : 0x00;
-    uint8_t AgcOn = rxGain == SX127X_RX_GAIN_AUTO ? 0x01 : 0x00;
+    uint8_t AgcOn = level == SX127X_RX_GAIN_AUTO ? 0x01 : 0x00;
     // set gain and boost LNA config
-    writeRegister(SX127X_REG_LNA, LnaBoostHf | (rxGain << 5));
+    writeRegister(SX127X_REG_LNA, LnaBoostHf | (level << 5));
     // enable or disable AGC
     writeBits(SX127X_REG_MODEM_CONFIG_3, AgcOn, 2, 1);
 }
@@ -219,7 +221,7 @@ void SX127x::setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t 
     setPreambleLength(preambleLength);
     setPayloadLength(payloadLength);
     setCrcEnable(crcType);
-    setInvertIq(invertIq);
+    // setInvertIq(invertIq);
 }
 
 void SX127x::setSpreadingFactor(uint8_t sf)

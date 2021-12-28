@@ -5,19 +5,19 @@
 #include <SX126x_API.h>
 
 // Status TX and RX operation
-#define SX126X_STATUS_DEFAULT                         LORA_STATUS_DEFAULT
-#define SX126X_STATUS_TX_WAIT                         LORA_STATUS_TX_WAIT
-#define SX126X_STATUS_TX_TIMEOUT                      LORA_STATUS_TX_TIMEOUT
-#define SX126X_STATUS_TX_DONE                         LORA_STATUS_TX_DONE
-#define SX126X_STATUS_RX_WAIT                         LORA_STATUS_RX_WAIT
-#define SX126X_STATUS_RX_CONTINUOUS                   LORA_STATUS_RX_CONTINUOUS
-#define SX126X_STATUS_RX_TIMEOUT                      LORA_STATUS_RX_TIMEOUT
-#define SX126X_STATUS_RX_DONE                         LORA_STATUS_RX_DONE
-#define SX126X_STATUS_HEADER_ERR                      LORA_STATUS_HEADER_ERR
-#define SX126X_STATUS_CRC_ERR                         LORA_STATUS_CRC_ERR
-#define SX126X_STATUS_CAD_WAIT                        LORA_STATUS_CAD_WAIT
-#define SX126X_STATUS_CAD_DETECTED                    LORA_STATUS_CAD_DETECTED
-#define SX126X_STATUS_CAD_DONE                        LORA_STATUS_CAD_DONE
+#define SX126X_STATUS_DEFAULT                   LORA_STATUS_DEFAULT
+#define SX126X_STATUS_TX_WAIT                   LORA_STATUS_TX_WAIT
+#define SX126X_STATUS_TX_TIMEOUT                LORA_STATUS_TX_TIMEOUT
+#define SX126X_STATUS_TX_DONE                   LORA_STATUS_TX_DONE
+#define SX126X_STATUS_RX_WAIT                   LORA_STATUS_RX_WAIT
+#define SX126X_STATUS_RX_CONTINUOUS             LORA_STATUS_RX_CONTINUOUS
+#define SX126X_STATUS_RX_TIMEOUT                LORA_STATUS_RX_TIMEOUT
+#define SX126X_STATUS_RX_DONE                   LORA_STATUS_RX_DONE
+#define SX126X_STATUS_HEADER_ERR                LORA_STATUS_HEADER_ERR
+#define SX126X_STATUS_CRC_ERR                   LORA_STATUS_CRC_ERR
+#define SX126X_STATUS_CAD_WAIT                  LORA_STATUS_CAD_WAIT
+#define SX126X_STATUS_CAD_DETECTED              LORA_STATUS_CAD_DETECTED
+#define SX126X_STATUS_CAD_DONE                  LORA_STATUS_CAD_DONE
 
 // Default Hardware Configuration
 #define SX126X_PIN_RF_IRQ                             1
@@ -59,8 +59,8 @@ class SX126x : public BaseLoRa
         // Modem, modulation parameter, and packet parameter setup methods
         void setModem(uint8_t modem=SX126X_LORA_MODEM);
         void setFrequency(uint32_t frequency);
-        void setTxPower(uint32_t txPower);
-        void setRxGain(uint8_t rxGain);
+        void setTxPower(uint8_t txPower, uint8_t version=SX126X_TX_POWER_SX1262);
+        void setRxGain(uint8_t boost);
         void setLoRaModulation(uint8_t sf, uint32_t bw, uint8_t cr, bool ldro=false);
         void setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t payloadLength, bool crcType=false, bool invertIq=false);
         void setSpreadingFactor(uint8_t sf);

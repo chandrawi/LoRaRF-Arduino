@@ -43,10 +43,15 @@
 #define SX127X_REG_TCXO                         0x4B
 #define SX127X_REG_PA_DAC                       0x4D
 
-// Long range mode
+// Modem options
 #define SX127X_FSK_MODEM                        0x00        // GFSK packet type
-#define SX127X_OOK_MODEM                        0x20        // OOK packet type
-#define SX127X_LORA_MODEM                       0x80        // LoRa packet type
+#define SX127X_LORA_MODEM                       0x01        // LoRa packet type
+#define SX127X_OOK_MODEM                        0x02        // OOK packet type
+
+// Long range mode and Modulation type
+#define SX127X_LONG_RANGE_MODE                  0x80        // GFSK packet type
+#define SX127X_MODULATION_OOK                   0x20        // OOK packet type
+#define SX127X_MODULATION_FSK                   0x00        // LoRa packet type
 
 // Devices modes
 #define SX127X_MODE_SLEEP                       0x00        // sleep
@@ -57,14 +62,16 @@
 #define SX127X_MODE_CAD                         0x07        // channel activity detection (CAD)
 
 // Rx operation mode
-#define SX127X_RX_SINGLE                         0x000000    // Rx timeout duration: no timeout (Rx single mode)
-#define SX127X_RX_CONTINUOUS                     0xFFFFFF    //                      infinite (Rx continuous mode)
+#define SX127X_RX_SINGLE                        0x000000    // Rx timeout duration: no timeout (Rx single mode)
+#define SX127X_RX_CONTINUOUS                    0xFFFFFF    //                      infinite (Rx continuous mode)
 
 // TX power options
-#define SX127X_PIN_RFO                          0x00        // output power is limited to +14 dBm
-#define SX127X_PIN_PA_BOOST                     0x80        // output power is limited to +20 dBm
+#define SX127X_TX_POWER_RFO                     0x00        // output power is limited to +14 dBm
+#define SX127X_TX_POWER_PA_BOOST                0x80        // output power is limited to +20 dBm
 
 // RX gain options
+#define SX127X_RX_GAIN_POWER_SAVING             0x00        // gain used in Rx mode: power saving gain (default)
+#define SX127X_RX_GAIN_BOOSTED                  0x01        //                       boosted gain
 #define SX127X_RX_GAIN_AUTO                     0x00        // option enable auto gain controller (AGC)
 
 // Header type
@@ -79,9 +86,9 @@
 #define SX127X_OSC_TCXO                         0x10        // external clipped sine TCXO AC-connected to XTA pin
 
 // DIO mapping
-#define SX127X_DIO0_RX_DONE                      0x00        // set DIO0 interrupt for: RX done
-#define SX127X_DIO0_TX_DONE                      0x40        //                         TX done
-#define SX127X_DIO0_CAD_DONE                     0x80        //                         CAD done
+#define SX127X_DIO0_RX_DONE                     0x00        // set DIO0 interrupt for: RX done
+#define SX127X_DIO0_TX_DONE                     0x40        //                         TX done
+#define SX127X_DIO0_CAD_DONE                    0x80        //                         CAD done
 
 // IRQ flags
 #define SX127X_IRQ_CAD_DETECTED                 0x01        // Valid Lora signal detected during CAD operation
@@ -149,8 +156,8 @@ class SX127x : public BaseLoRa
         // Modem, modulation parameter, and packet parameter setup methods
         void setModem(uint8_t modem=SX127X_LORA_MODEM);
         void setFrequency(uint32_t frequency);
-        void setTxPower(uint8_t txPower, uint8_t paPin=SX127X_PIN_RFO);
-        void setRxGain(uint8_t rxGain, bool boost=false);
+        void setTxPower(uint8_t txPower, uint8_t paPin=SX127X_TX_POWER_PA_BOOST);
+        void setRxGain(uint8_t boost, uint8_t level=SX127X_RX_GAIN_AUTO);
         void setLoRaModulation(uint8_t sf, uint32_t bw, uint8_t cr, bool ldro=false);
         void setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t payloadLength, bool crcType=false, bool invertIq=false);
         void setSpreadingFactor(uint8_t sf);
