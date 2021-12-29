@@ -8,7 +8,7 @@ void setup() {
   Serial.begin(38400);
 
   // Begin LoRa radio and set NSS, reset, busy, txen, and rxen pin with connected arduino pins
-  // IRQ pin must connected to Arduino external interrupt pin for continuous RX mode. Set txen and rxen pin to -1 if RF module doesn't have one
+  // IRQ pin not used in this example (set to -1). Set txen and rxen pin to -1 if RF module doesn't have one
   Serial.println("Begin LoRa radio");
   int8_t nssPin = 10, resetPin = 9, busyPin = 4, irqPin = -1, txenPin = 8, rxenPin = 7;
   if (!LoRa.begin(nssPin, resetPin, busyPin, irqPin, txenPin, rxenPin)){
@@ -33,7 +33,7 @@ void setup() {
   Serial.println("Set frequency to 915 Mhz");
   LoRa.setFrequency(915000000);
 
-  // Set RX gain. RX gain option are power saving gain or boosted gain 
+  // Set RX gain. RX gain option are power saving gain or boosted gain
   Serial.println("Set RX gain to power saving gain");
   LoRa.setRxGain(SX126X_RX_GAIN_POWER_SAVING);                        // Power saving gain
 
@@ -59,22 +59,23 @@ void setup() {
   Serial.println("Set syncronize word to 0x3444");
   LoRa.setSyncWord(0x3444);
 
-  Serial.println("\n-- LoRa RECEIVER CONTINUOUS --\n");
-  
-  // Request for receiving new LoRa packet in RX continuous mode
-  LoRa.request(SX126X_RX_CONTINUOUS);
+  Serial.println("\n-- LORA RECEIVER --\n");
   
 }
 
 void loop() {
   
+  // Request for receiving new LoRa packet
+  LoRa.request();
   // Wait for incoming LoRa packet
   LoRa.wait();
 
   // Put received packet to message and counter variable
+  // read() and available() method must be called after request() or listen() method
   const uint8_t msgLen = LoRa.available() - 1;
   char message[msgLen];
   uint8_t counter;
+  // available() method return remaining received payload length and will decrement each read() or get() method called
   uint8_t i=0;
   while (LoRa.available() > 1){
     message[i++] = LoRa.read();
@@ -94,8 +95,9 @@ void loop() {
   Serial.println(" dB");
   
   // Show received status in case CRC or header error occur
-  if (LoRa.status() == SX126X_STATUS_CRC_ERR) Serial.println("CRC error");
-  if (LoRa.status() == SX126X_STATUS_HEADER_ERR) Serial.println("Packet header error");
+  uint8_t status = LoRa.status();
+  if (status == SX126X_STATUS_CRC_ERR) Serial.println("CRC error");
+  else if (status == SX126X_STATUS_HEADER_ERR) Serial.println("Packet header error");
   Serial.println();
 
 }

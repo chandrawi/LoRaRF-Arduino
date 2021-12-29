@@ -2,11 +2,6 @@
 
 SX127x LoRa;
 
-// receive data length and pointer
-const uint8_t packetLength = 15;
-uint8_t packetData[packetLength];
-volatile bool flag = false;
-
 void setup() {
 
   // Begin serial communication
@@ -24,66 +19,69 @@ void setup() {
   Serial.println("Set frequency to 915 Mhz");
   LoRa.setFrequency(915E6);
 
-  // Set RX gain. RX gain option are power saving gain or boosted gain 
+  // Set RX gain to boosted gain
   Serial.println("Set RX gain to power saving gain");
-  LoRa.setRxGain(SX127X_RX_GAIN_AUTO, false);
+  LoRa.setRxGain(SX127X_RX_GAIN_BOOSTED);
 
   // Configure modulation parameter including spreading factor (SF), bandwidth (BW), and coding rate (CR)
-  // Transmitter must have same SF and BW setting so receiver can receive LoRa packet
   Serial.println("Set modulation parameters:\n\tSpreading factor = 7\n\tBandwidth = 125 kHz\n\tCoding rate = 4/5");
   LoRa.setSpreadingFactor(7);
   LoRa.setBandwidth(125000);
   LoRa.setCodeRate(5);
 
   // Configure packet parameter including header type, preamble length, payload length, and CRC type
-  // The explicit packet includes header contain CR, number of byte, and CRC type
-  // Packet with explicit header can't be received by receiver with implicit header mode
   Serial.println("Set packet parameters:\n\tExplicit header type\n\tPreamble length = 12\n\tPayload Length = 15\n\tCRC on");
   LoRa.setHeaderType(SX127X_HEADER_EXPLICIT);
   LoRa.setPreambleLength(12);
   LoRa.setPayloadLength(15);
   LoRa.setCrcEnable(true);
 
-  // Set syncronize word for public network (0x3444)
-  Serial.println("Set syncronize word to 0x3444");
-  LoRa.setSyncWord(0x34);
+  // Set syncronize word
+  Serial.println("Set syncronize word to 0x44");
+  LoRa.setSyncWord(0x44);
 
-  Serial.println("\n-- LoRa RECEIVER CALLBACK --\n");
+  Serial.println("\n-- LORA RECEIVER TIMEOUT --\n");
 
-  // Register callback function to be called every RX done
-  LoRa.onReceive(getReceiveData);
-
-  // Begin request LoRa packet in continuous mode
-  LoRa.request(SX127X_RX_CONTINUOUS);
 }
 
 void loop() {
 
-  if (flag) {
-    // Print received package
-    Serial.write(packetData, packetLength - 1);
-    Serial.print("  ");
-    Serial.println(packetData[packetLength - 1]);
+  // Request for receiving new LoRa packet within 1000 ms
+  LoRa.request(1000);
+  // Wait for incoming LoRa packet
+  LoRa.wait();
 
-    // Print packet/signal status including RSSI, SNR, and signalRSSI
-    Serial.print("Packet status: RSSI = ");
+  // Only show message if receive process is done
+  uint8_t status = LoRa.status();
+  if (status == SX127X_STATUS_RX_DONE) {
+
+    // Put received packet to message and counter variable
+    const uint8_t msgLen = LoRa.available() - 1;
+    char message[msgLen];
+    LoRa.read(message, msgLen);
+    uint8_t counter = LoRa.read();
+
+    // Print received message and counter in serial
+    Serial.write(message, msgLen);
+    Serial.print("  ");
+    Serial.println(counter);
+
+    // Print packet / signal status
+    Serial.print("RSSI: ");
     Serial.print(LoRa.packetRssi());
-    Serial.print(" dBm | SNR = ");
+    Serial.print(" dBm | SNR: ");
     Serial.print(LoRa.snr());
     Serial.println(" dB");
     Serial.println();
 
-    // Reset flag
-    flag = false;
-  }
-}
+  } else {
 
-void getReceiveData() {
+    // Show received status
+    if (status == SX127X_STATUS_RX_TIMEOUT) Serial.println("Receive timeout");
+    else if (status == SX127X_STATUS_CRC_ERR) Serial.println("CRC error");
+    else if (status == SX127X_STATUS_HEADER_ERR) Serial.println("Packet header error");
+    Serial.println();
 
-  // set flag
-  flag = true;
-  // Store received data
-  for (uint8_t i=0; i<packetLength; i++) {
-    packetData[i] = LoRa.read();
   }
+
 }

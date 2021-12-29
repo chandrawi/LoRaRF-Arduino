@@ -20,16 +20,16 @@ void setup() {
   Serial.println("Set frequency to 915 Mhz");
   LoRa.setFrequency(915E6);
 
-  // Set RX gain. RX gain option are power saving gain or boosted gain 
+  // Set RX gain. RX gain option are power saving gain or boosted gain
   Serial.println("Set RX gain to power saving gain");
-  LoRa.setRxGain(SX127X_RX_GAIN_AUTO, false);                       // AGC on, Power saving gain
+  LoRa.setRxGain(SX127X_RX_GAIN_POWER_SAVING, SX127X_RX_GAIN_AUTO); // AGC on, Power saving gain
 
   // Configure modulation parameter including spreading factor (SF), bandwidth (BW), and coding rate (CR)
   // Transmitter must have same SF and BW setting so receiver can receive LoRa packet
   Serial.println("Set modulation parameters:\n\tSpreading factor = 7\n\tBandwidth = 125 kHz\n\tCoding rate = 4/5");
   LoRa.setSpreadingFactor(7);                                       // LoRa spreading factor: 7
   LoRa.setBandwidth(125000);                                        // Bandwidth: 125 kHz
-  LoRa.setCodeRate(5);                                              // Coding rate: 5/4
+  LoRa.setCodeRate(5);                                              // Coding rate: 4/5
 
   // Configure packet parameter including header type, preamble length, payload length, and CRC type
   // The explicit packet includes header contain CR, number of byte, and CRC type
@@ -40,11 +40,11 @@ void setup() {
   LoRa.setPayloadLength(15);                                        // Initialize payloadLength to 15
   LoRa.setCrcEnable(true);                                          // Set CRC enable
 
-  // Set syncronize word for public network (0x3444)
-  Serial.println("Set syncronize word to 0x3444");
-  LoRa.setSyncWord(0x34);
+  // Set syncronize word
+  Serial.println("Set syncronize word to 0x44");
+  LoRa.setSyncWord(0x44);
 
-  Serial.println("\n-- LoRa RECEIVER --\n");
+  Serial.println("\n-- LORA RECEIVER --\n");
 
 }
 
@@ -56,7 +56,7 @@ void loop() {
   LoRa.wait();
 
   // Put received packet to message and counter variable
-  // read() and available() method must be called after request() or listen() method
+  // read() and available() method must be called after request() method
   const uint8_t msgLen = LoRa.available() - 1;
   char message[msgLen];
   LoRa.read(message, msgLen);

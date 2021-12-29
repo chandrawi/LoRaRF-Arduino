@@ -41,7 +41,7 @@ void setup() {
   // Set TX power, default power for SX1262 and SX1268 are +22 dBm and for SX1261 is +14 dBm
   // This function will set PA config with optimal setting for requested TX power
   Serial.println("Set TX power to +17 dBm");
-  LoRa.setTxPower(SX126X_TX_POWER_SX1262_17);                          // TX power +17 dBm for SX1262
+  LoRa.setTxPower(17, SX126X_TX_POWER_SX1262);                        // TX power +17 dBm for SX1262
 
   // Configure modulation parameter including spreading factor (SF), bandwidth (BW), and coding rate (CR)
   // Receiver must have same SF and BW setting with transmitter to be able to receive LoRa packet

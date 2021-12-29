@@ -27,7 +27,7 @@ void setup() {
 
   // Set RX gain. RX gain option are power saving gain or boosted gain 
   Serial.println("Set RX gain to power saving gain");
-  LoRa.setTxPower(17, SX127X_PIN_PA_BOOST);                         // TX power +17 dBm using PA boost pin
+  LoRa.setTxPower(17, SX127X_TX_POWER_PA_BOOST);                    // TX power +17 dBm using PA boost pin
 
   // Configure modulation parameter including spreading factor (SF), bandwidth (BW), and coding rate (CR)
   // Transmitter must have same SF and BW setting so receiver can receive LoRa packet
@@ -45,9 +45,9 @@ void setup() {
   LoRa.setPayloadLength(15);                                        // Initialize payloadLength to 15
   LoRa.setCrcEnable(true);                                          // Set CRC enable
 
-  // Set syncronize word for public network (0x3444)
-  Serial.println("Set syncronize word to 0x3444");
-  LoRa.setSyncWord(0x34);
+  // Set syncronize word
+  Serial.println("Set syncronize word to 0x44");
+  LoRa.setSyncWord(0x44);
 
   Serial.println("\n-- LORA TRANSMITTER --\n");
 

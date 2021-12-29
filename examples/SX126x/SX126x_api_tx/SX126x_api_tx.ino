@@ -24,17 +24,17 @@ uint8_t deviceSel = 0x00;
 uint8_t power = 0x16;
 
 // Define modulation parameters setting
-uint8_t sf = SX126X_LORA_SF_7;
-uint8_t bw = SX126X_LORA_BW_125;
-uint8_t cr = SX126X_LORA_CR_4_5;
-uint8_t ldro = SX126X_LORA_LDRO_OFF;
+uint8_t sf = 7;     // spreading factor 7
+uint8_t bw = 4;     // 125 kHz
+uint8_t cr = 1;     // 4/5 code rate
+uint8_t ldro = 0;   // low data rate optimize off
 
 // Define packet parameters setting
-uint16_t preambleLength = 0x0C;
-uint8_t headerType = SX126X_LORA_HEADER_EXPLICIT;
-uint8_t payloadLength = 64;
-uint8_t crcType = SX126X_LORA_CRC_ON;
-uint8_t invertIq = SX126X_LORA_IQ_STANDARD;
+uint16_t preambleLength = 12;                 // 12 bytes preamble
+uint8_t headerType = SX126X_HEADER_EXPLICIT;  // explicit packet header
+uint8_t payloadLength = 64;                   // 64 bytes payload
+uint8_t crcType = 1;                          // cyclic redundancy check (CRC) on
+uint8_t invertIq = 0;                         // standard IQ setup
 
 // SyncWord setting
 uint8_t sw[2] = {0x34, 0x44};

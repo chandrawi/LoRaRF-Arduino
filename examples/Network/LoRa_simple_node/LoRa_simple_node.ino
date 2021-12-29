@@ -1,6 +1,14 @@
 #include <SX126x.h>
+#include <SX127x.h>
 
+// #define SX126X
+#define SX127X
+
+#if defined(SX126X)
 SX126x LoRa;
+#elif defined(SX127X)
+SX127x LoRa;
+#endif
 
 // gateway ID and node ID
 uint8_t gatewayId = 0xCC;
@@ -22,6 +30,7 @@ void setup() {
   // Begin serial communication
   Serial.begin(38400);
 
+#if defined(SX126X)
   // Begin LoRa radio and set NSS, reset, busy, IRQ, txen, and rxen pin with connected arduino pins
   Serial.println("Begin LoRa radio");
   int8_t nssPin = 10, resetPin = 9, busyPin = 4, irqPin = 2, txenPin = 8, rxenPin = 7;
@@ -29,20 +38,26 @@ void setup() {
     Serial.println("Something wrong, can't begin LoRa radio");
     while(1);
   }
-
   // Configure TCXO used in RF module
   Serial.println("Set RF module to use TCXO as clock reference");
-  uint8_t dio3Voltage = SX126X_DIO3_OUTPUT_1_8;
-  uint32_t tcxoDelay = SX126X_TCXO_DELAY_10;
-  LoRa.setDio3TcxoCtrl(dio3Voltage, tcxoDelay);
-  
+  LoRa.setDio3TcxoCtrl(SX126X_DIO3_OUTPUT_1_8, SX126X_TCXO_DELAY_10);
+#elif defined(SX127X)
+  // Begin LoRa radio and set NSS, reset, IRQ, txen, and rxen pin with connected arduino pins
+  Serial.println("Begin LoRa radio");
+  int8_t nssPin = 10, resetPin = 9, irqPin = 2, txenPin = 8, rxenPin = 7;
+  if (!LoRa.begin(nssPin, resetPin, irqPin, txenPin, rxenPin)){
+    Serial.println("Something wrong, can't begin LoRa radio");
+    while(1);
+  }
+#endif
+
   // Set frequency to 915 Mhz
   Serial.println("Set frequency to 915 Mhz");
   LoRa.setFrequency(915000000);
 
-  // Set TX power
-  Serial.println("Set TX power to +22 dBm");
-  LoRa.setTxPower(SX126X_TX_POWER_SX1262_22);
+  // Set TX power to 17 dBm
+  Serial.println("Set TX power to +17 dBm");
+  LoRa.setTxPower(17);
 
   // Configure modulation parameter including spreading factor (SF), bandwidth (BW), and coding rate (CR)
   Serial.println("Set modulation parameters:\n\tSpreading factor = 7\n\tBandwidth = 125 kHz\n\tCoding rate = 4/5");
@@ -53,17 +68,17 @@ void setup() {
 
   // Configure packet parameter including header type, preamble length, payload length, and CRC type
   Serial.println("Set packet parameters:\n\tImplicit header type\n\tPreamble length = 12\n\tPayload Length = message length\n\tCRC on");
-  uint8_t headerType = SX126X_HEADER_IMPLICIT;
+  uint8_t headerType = LORA_HEADER_IMPLICIT;
   uint16_t preambleLength = 12;
   uint8_t payloadLength = messageLen;
   bool crcType = true;
   LoRa.setLoRaPacket(headerType, preambleLength, payloadLength, crcType);
 
-  // Set syncronize word for private network (0x1424)
-  Serial.println("Set syncronize word to 0x1424");
-  LoRa.setSyncWord(0x1424);
+  // Set syncronize word for private network (0x3444)
+  Serial.println("Set syncronize word to 0x3444");
+  LoRa.setSyncWord(0x3444);
 
-  Serial.println("\n-- LoRa Node --\n");
+  Serial.println("\n-- LORA NODE --\n");
   
   // Assign gateway Id and node Id to message object
   message.gatewayId = gatewayId;
@@ -80,11 +95,9 @@ void loop() {
   message.messageId++;
   
   // Transmit message object
-  // Set transmit timeout to 250 ms
-  uint32_t timeout = 250;
   LoRa.beginPacket();
   LoRa.put(message);
-  LoRa.endPacket(timeout);
+  LoRa.endPacket();
 
   // Print message in serial
   Serial.print("Gateway ID    : 0x");
@@ -109,9 +122,6 @@ void loop() {
   Serial.println(" ms");
   Serial.println();
   
-  // Print status timeout when transmit process terminated due to timeout
-  if (LoRa.status() == SX126X_STATUS_TX_TIMEOUT) Serial.println("Transmit timeout");
-
   // Put RF module to sleep in a few seconds
   LoRa.sleep();
   delay(5000);
