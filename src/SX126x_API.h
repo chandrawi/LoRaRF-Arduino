@@ -11,6 +11,7 @@
 #define SX126X_REG_FSK_NODE_ADDRESS             0x06CD
 #define SX126X_REG_IQ_POLARITY_SETUP            0x0736
 #define SX126X_REG_LORA_SYNC_WORD_MSB           0x0740
+#define SX126X_REG_RANDOM_NUMBER_GEN            0x0819
 #define SX126X_REG_TX_MODULATION                0x0889
 #define SX126X_REG_RX_GAIN                      0x08AC
 #define SX126X_REG_TX_CLAMP_CONFIG              0x08D8
@@ -37,36 +38,21 @@
 #define SX126X_RX_SINGLE                        0x000000    // Rx timeout duration: no timeout (Rx single mode)
 #define SX126X_RX_CONTINUOUS                    0xFFFFFF    //                      infinite (Rx continuous mode)
 
-// StopTimerOnPreamble
-#define SX126X_STOP_PREAMBLE_OFF                0x00        // stop timer on: sync word or header (default)
-#define SX126X_STOP_PREAMBLE_ON                 0x01        //                preamble detection
-
 // SetRegulatorMode
 #define SX126X_REGULATOR_LDO                    0x00        // set regulator mode: LDO (default)
 #define SX126X_REGULATOR_DC_DC                  0x01        //                     DC-DC
 
-// Calibrate
-#define SX126X_CALIBRATE_RC64K_OFF              0x00        // 64 kHz RC osc. calibration: disabled
-#define SX126X_CALIBRATE_RC64K_ON               0x01        //                             enabled
-#define SX126X_CALIBRATE_RC13M_OFF              0x00        // 13 MHz RC osc. calibration: disabled
-#define SX126X_CALIBRATE_RC13M_ON               0x02        //                             enabled
-#define SX126X_CALIBRATE_PLL_OFF                0x00        // PLL calibration: disabled
-#define SX126X_CALIBRATE_PLL_ON                 0x04        //                  enabled
-#define SX126X_CALIBRATE_ADC_PULSE_OFF          0x00        // ADC pulse calibration: disabled
-#define SX126X_CALIBRATE_ADC_PULSE_ON           0x08        //                        enabled
-#define SX126X_CALIBRATE_ADC_BULK_N_OFF         0x00        // ADC bulk N calibration: disabled
-#define SX126X_CALIBRATE_ADC_BULK_N_ON          0x10        //                         enabled
-#define SX126X_CALIBRATE_ADC_BULK_P_OFF         0x00        // ADC bulk P calibration: disabled
-#define SX126X_CALIBRATE_ADC_BULK_P_ON          0x20        //                         enabled
-#define SX126X_CALIBRATE_IMAGE_OFF              0x00        // image calibration: disabled
-#define SX126X_CALIBRATE_IMAGE_ON               0x40        //                    enabled
-
 // CalibrateImage
-#define SX126X_CAL_IMG_430_440                  0x6B6F      // ISM band: 430-440 Mhz
-#define SX126X_CAL_IMG_470_510                  0x7581      //           470-510 Mhz
-#define SX126X_CAL_IMG_779_787                  0xC1C5      //           779-787 Mhz
-#define SX126X_CAL_IMG_863_870                  0xD7DB      //           863-870 Mhz
-#define SX126X_CAL_IMG_902_928                  0xE1E9      //           902-928 Mhz
+#define SX126X_CAL_IMG_430                      0x6B        // ISM band: 430-440 Mhz Freq1
+#define SX126X_CAL_IMG_440                      0x6F        //           430-440 Mhz Freq2
+#define SX126X_CAL_IMG_470                      0x75        //           470-510 Mhz Freq1
+#define SX126X_CAL_IMG_510                      0x81        //           470-510 Mhz Freq2
+#define SX126X_CAL_IMG_779                      0xC1        //           779-787 Mhz Freq1
+#define SX126X_CAL_IMG_787                      0xC5        //           779-787 Mhz Freq2
+#define SX126X_CAL_IMG_863                      0xD7        //           863-870 Mhz Freq1
+#define SX126X_CAL_IMG_870                      0xDB        //           863-870 Mhz Freq2
+#define SX126X_CAL_IMG_902                      0xE1        //           902-928 Mhz Freq1
+#define SX126X_CAL_IMG_928                      0xE9        //           902-928 Mhz Freq2
 
 // SetPaConfig
 #define SX126X_TX_POWER_SX1261                  0x01        // device version for TX power: SX1261
@@ -127,6 +113,25 @@
 #define SX126X_PA_RAMP_1700U                    0x06        //            1700 us
 #define SX126X_PA_RAMP_3400U                    0x07        //            3400 us
 
+// SetModulationParams for LoRa packet type
+#define SX126X_BW_7800                          0x00        // LoRa bandwidth: 7.8 kHz
+#define SX126X_BW_10400                         0x08        //                 10.4 kHz
+#define SX126X_BW_15600                         0x01        //                 15.6 kHz
+#define SX126X_BW_20800                         0x09        //                 20.8 kHz
+#define SX126X_BW_31250                         0x02        //                 31.25 kHz
+#define SX126X_BW_41700                         0x0A        //                 41.7 kHz
+#define SX126X_BW_62500                         0x03        //                 62.5 kHz
+#define SX126X_BW_125000                        0x04        //                 125 kHz
+#define SX126X_BW_250000                        0x05        //                 250 kHz
+#define SX126X_BW_500000                        0x06        //                 500 kHz
+#define SX126X_CR_4_4                           0x00        // LoRa coding rate: 4/4 (no coding rate)
+#define SX126X_CR_4_5                           0x01        //                   4/5
+#define SX126X_CR_4_6                           0x02        //                   4/6
+#define SX126X_CR_4_7                           0x03        //                   4/7
+#define SX126X_CR_4_8                           0x04        //                   4/8
+#define SX126X_LDRO_OFF                         0x00        // LoRa low data rate optimization: disabled
+#define SX126X_LDRO_ON                          0x00        //                                  enabled
+
 // SetModulationParams for FSK packet type
 #define SX126X_PULSE_NO_FILTER                  0x00        // FSK pulse shape: no filter applied
 #define SX126X_PULSE_GAUSSIAN_BT_0_3            0x08        //                  Gaussian BT 0.3
@@ -155,9 +160,13 @@
 #define SX126X_BW_373600                        0x11        //                373.6 kHz DSB
 #define SX126X_BW_467000                        0x09        //                476 kHz DSB
 
-// SetPacketParams
+// SetPacketParams for LoRa packet type
 #define SX126X_HEADER_EXPLICIT                  0x00        // LoRa header mode: explicit
 #define SX126X_HEADER_IMPLICIT                  0x01        //                   implicit
+#define SX126X_CRC_OFF                          0x00        // LoRa CRC mode: disabled
+#define SX126X_CRC_ON                           0x01        //                enabled
+#define SX126X_IQ_STANDARD                      0x00        // LoRa IQ setup: standard
+#define SX126X_IQ_INVERTED                      0x01        //                inverted
 
 // SetPacketParams for FSK packet type
 #define SX126X_PREAMBLE_DET_LEN_OFF             0x00        // FSK preamble detector length: off
@@ -170,7 +179,7 @@
 #define SX126X_ADDR_COMP_ALL                    0x02        //                        filtering on node and broadcast address
 #define SX126X_PACKET_KNOWN                     0x00        // FSK packet type: the packet length known on both side
 #define SX126X_PACKET_VARIABLE                  0x01        //                  the packet length on variable size
-#define SX126X_CRC_OFF                          0x01        // FSK CRC type: no CRC
+#define SX126X_CRC_0                            0x01        // FSK CRC type: no CRC
 #define SX126X_CRC_1                            0x00        //               CRC computed on 1 byte
 #define SX126X_CRC_2                            0x02        //               CRC computed on 2 byte
 #define SX126X_CRC_1_INV                        0x04        //               CRC computed on 1 byte and inverted
@@ -224,7 +233,7 @@
 #define SX126X_PIN_RESET                        4
 #define SX126X_PIN_BUSY                         5
 #define SX126X_SPI                              SPI
-#define SX126X_SPI_FREQUENCY                    4000000
+#define SX126X_SPI_FREQUENCY                    F_CPU / 2
 #define SX126X_BUSY_TIMEOUT                     5000        // Default timeout for checking busy pin
 
 class SX126x_API
@@ -273,10 +282,8 @@ class SX126x_API
         static void setPacketType(uint8_t packetType);
         static void getPacketType(uint8_t* packetType);
         static void setTxParams(uint8_t power, uint8_t rampTime);
-        static void setModulationParams(uint8_t* modulationParams);
         static void setModulationParamsLoRa(uint8_t sf, uint8_t bw, uint8_t cr, uint8_t ldro);
         static void setModulationParamsFSK(uint32_t br, uint8_t pulseShape, uint8_t bandwidth, uint32_t Fdev);
-        static void setPacketParams(uint8_t* packetParams);
         static void setPacketParamsLoRa(uint16_t preambleLength, uint8_t headerType, uint8_t payloadLength, uint8_t crcType, uint8_t invertIq);
         static void setPacketParamsFSK(uint16_t preambleLength, uint8_t preambleDetector, uint8_t syncWordLength, uint8_t addrComp, uint8_t packetType, uint8_t payloadLength, uint8_t crcType, uint8_t whitening);
         static void setCadParams(uint8_t cadSymbolNum, uint8_t cadDetPeak, uint8_t cadDetMin, uint8_t cadExitMode, uint32_t cadTimeout);

@@ -46,8 +46,8 @@ void setup() {
   LoRa.setCrcEnable(true);                                          // Set CRC enable
 
   // Set syncronize word
-  Serial.println("Set syncronize word to 0x44");
-  LoRa.setSyncWord(0x44);
+  Serial.println("Set syncronize word to 0x34");
+  LoRa.setSyncWord(0x34);
 
   Serial.println("\n-- LORA TRANSMITTER --\n");
 

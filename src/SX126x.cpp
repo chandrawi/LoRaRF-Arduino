@@ -178,24 +178,24 @@ void SX126x::setFrequency(uint32_t frequency)
 {
     uint8_t calFreq[2];
     if (frequency < 446000000) {        // 430 - 440 Mhz
-        calFreq[0] = 0x6B;
-        calFreq[1] = 0x6F;
+        calFreq[0] = SX126X_CAL_IMG_430;
+        calFreq[1] = SX126X_CAL_IMG_440;
     }
     else if (frequency < 734000000) {   // 470 - 510 Mhz
-        calFreq[0] = 0x75;
-        calFreq[1] = 0x81;
+        calFreq[0] = SX126X_CAL_IMG_470;
+        calFreq[1] = SX126X_CAL_IMG_510;
     }
     else if (frequency < 828000000) {   // 779 - 787 Mhz
-        calFreq[0] = 0xC1;
-        calFreq[1] = 0xC5;
+        calFreq[0] = SX126X_CAL_IMG_779;
+        calFreq[1] = SX126X_CAL_IMG_787;
     }
     else if (frequency < 877000000) {   // 863 - 870 Mhz
-        calFreq[0] = 0xD7;
-        calFreq[1] = 0xDB;
+        calFreq[0] = SX126X_CAL_IMG_863;
+        calFreq[1] = SX126X_CAL_IMG_870;
     }
     else if (frequency < 1100000000) {  // 902 - 928 Mhz
-        calFreq[0] = 0xE1;
-        calFreq[1] = 0xE9;
+        calFreq[0] = SX126X_CAL_IMG_902;
+        calFreq[1] = SX126X_CAL_IMG_928;
     }
     // calculate frequency for setting configuration
     uint32_t rfFreq = ((uint64_t) frequency << SX126X_RF_FREQUENCY_SHIFT) / SX126X_RF_FREQUENCY_XTAL;
@@ -207,7 +207,7 @@ void SX126x::setFrequency(uint32_t frequency)
 
 void SX126x::setTxPower(uint8_t txPower, uint8_t version)
 {
-    // maximum TX power is 22 dBm and 14 dBm for RFO pin
+    // maximum TX power is 22 dBm and 15 dBm for SX1261
     if (txPower > 22) txPower = 22;
     else if (txPower > 15 && version == SX126X_TX_POWER_SX1261) txPower = 15;
 
@@ -264,12 +264,8 @@ void SX126x::setRxGain(uint8_t boost)
     SX126x_API::writeRegister(SX126X_REG_RX_GAIN, &gain, 1);
     if (boost){
         // set certain register to retain configuration after wake from sleep mode
-        uint8_t value = 0x01;
-        SX126x_API::writeRegister(0x029F, &value, 1);
-        value = 0x08;
-        SX126x_API::writeRegister(0x02A0, &value, 1);
-        value = 0xAC;
-        SX126x_API::writeRegister(0x02A1, &value, 1);
+        uint8_t buf[3] = {0x01, 0x08, 0xAC};
+        SX126x_API::writeRegister(0x029F, buf, 3);
     }
 }
 
@@ -284,16 +280,16 @@ void SX126x::setLoRaModulation(uint8_t sf, uint32_t bw, uint8_t cr, bool ldro)
     if (sf > 12) sf = 12;
     else if (sf < 5) sf = 5;
     // select bandwidth options
-    if (bw < 9100) bw = 0x00;           // 7.8 kHz
-    else if (bw < 13000) bw = 0x08;     // 10.4 kHz
-    else if (bw < 18200) bw = 0x01;     // 15.6 kHz
-    else if (bw < 26000) bw = 0x09;     // 20.8 kHz
-    else if (bw < 36500) bw = 0x02;     // 31.25 kHz
-    else if (bw < 52100) bw = 0x0A;     // 41.7 kHz
-    else if (bw < 93800) bw = 0x03;     // 62.5 kHz
-    else if (bw < 187500) bw = 0x04;    // 125 kHz
-    else if (bw < 375000) bw = 0x05;    // 250 kHz
-    else bw = 0x06;                     // 500 kHz
+    if (bw < 9100) bw = SX126X_BW_7800;             // 7.8 kHz
+    else if (bw < 13000) bw = SX126X_BW_10400;      // 10.4 kHz
+    else if (bw < 18200) bw = SX126X_BW_15600;      // 15.6 kHz
+    else if (bw < 26000) bw = SX126X_BW_20800;      // 20.8 kHz
+    else if (bw < 36500) bw = SX126X_BW_31250;      // 31.25 kHz
+    else if (bw < 52100) bw = SX126X_BW_41700;      // 41.7 kHz
+    else if (bw < 93800) bw = SX126X_BW_62500;      // 62.5 kHz
+    else if (bw < 187500) bw = SX126X_BW_125000;    // 125 kHz
+    else if (bw < 375000) bw = SX126X_BW_250000;    // 250 kHz
+    else bw = SX126X_BW_500000;                     // 500 kHz
     // valid code rate denominator is between 4 and 8
     cr -= 4;
     if (cr > 4) cr = 0;
@@ -310,7 +306,7 @@ void SX126x::setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t 
     _invertIq = invertIq;
 
     // filter valid header type config
-    if (headerType > 0x01) headerType = 0x00;
+    if (headerType != SX126X_HEADER_IMPLICIT) headerType = SX126X_HEADER_EXPLICIT;
 
     SX126x_API::setPacketParamsLoRa(preambleLength, headerType, payloadLength, (uint8_t) crcType, (uint8_t) invertIq);
     SX126x_API::fixInvertedIq((uint8_t) invertIq);
@@ -361,11 +357,15 @@ void SX126x::setInvertIq(bool invertIq)
     setLoRaPacket(_headerType, _preambleLength, _payloadLength, _crcType, invertIq);
 }
 
-void SX126x::setSyncWord(uint16_t sw)
+void SX126x::setSyncWord(uint16_t syncWord)
 {
     uint8_t buf[2];
-    buf[0] = sw >> 8;
-    buf[1] = sw & 0xFF;
+    buf[0] = syncWord >> 8;
+    buf[1] = syncWord & 0xFF;
+    if (syncWord <= 0xFF) {
+        buf[0] = (syncWord & 0xF0) | 0x04;
+        buf[1] = (syncWord << 4) | 0x04;
+    }
     SX126x_API::writeRegister(SX126X_REG_LORA_SYNC_WORD_MSB, buf, 2);
 }
 
@@ -453,7 +453,8 @@ bool SX126x::endPacket(uint32_t timeout, bool intFlag)
     return true;
 }
 
-bool SX126x::endPacket(bool intFlag){
+bool SX126x::endPacket(bool intFlag)
+{
     return endPacket(SX126X_TX_SINGLE, intFlag);
 }
 
@@ -599,28 +600,6 @@ void SX126x::purge(uint8_t length)
     _bufferIndex += length;
 }
 
-uint8_t SX126x::status()
-{
-    // set back status IRQ for RX continuous operation
-    uint16_t statusIrq = _statusIrq;
-    if (_statusWait == SX126X_STATUS_RX_CONTINUOUS) {
-        _statusIrq = 0x0000;
-    }
-
-    // get status for transmit and receive operation based on status IRQ
-    if (statusIrq & SX126X_IRQ_TIMEOUT) {
-        if (_statusWait == SX126X_STATUS_TX_WAIT) return SX126X_STATUS_TX_TIMEOUT;
-        else return SX126X_STATUS_RX_TIMEOUT;
-    }
-    else if (statusIrq & SX126X_IRQ_HEADER_ERR) return SX126X_STATUS_HEADER_ERR;
-    else if (statusIrq & SX126X_IRQ_CRC_ERR) return SX126X_STATUS_CRC_ERR;
-    else if (statusIrq & SX126X_IRQ_TX_DONE) return SX126X_STATUS_TX_DONE;
-    else if (statusIrq & SX126X_IRQ_RX_DONE) return SX126X_STATUS_RX_DONE;
-
-    // return TX or RX wait status
-    return _statusWait;
-}
-
 bool SX126x::wait(uint32_t timeout)
 {
     // immediately return when currently not waiting transmit or receive process
@@ -658,6 +637,28 @@ bool SX126x::wait(uint32_t timeout)
     return true;
 }
 
+uint8_t SX126x::status()
+{
+    // set back status IRQ for RX continuous operation
+    uint16_t statusIrq = _statusIrq;
+    if (_statusWait == SX126X_STATUS_RX_CONTINUOUS) {
+        _statusIrq = 0x0000;
+    }
+
+    // get status for transmit and receive operation based on status IRQ
+    if (statusIrq & SX126X_IRQ_TIMEOUT) {
+        if (_statusWait == SX126X_STATUS_TX_WAIT) return SX126X_STATUS_TX_TIMEOUT;
+        else return SX126X_STATUS_RX_TIMEOUT;
+    }
+    else if (statusIrq & SX126X_IRQ_HEADER_ERR) return SX126X_STATUS_HEADER_ERR;
+    else if (statusIrq & SX126X_IRQ_CRC_ERR) return SX126X_STATUS_CRC_ERR;
+    else if (statusIrq & SX126X_IRQ_TX_DONE) return SX126X_STATUS_TX_DONE;
+    else if (statusIrq & SX126X_IRQ_RX_DONE) return SX126X_STATUS_RX_DONE;
+
+    // return TX or RX wait status
+    return _statusWait;
+}
+
 uint32_t SX126x::transmitTime()
 {
     // get transmit time in millisecond (ms)
@@ -683,7 +684,7 @@ float SX126x::snr()
     // get signal to noise ratio (SNR) of last incoming package
     uint8_t rssiPkt, snrPkt, signalRssiPkt;
     SX126x_API::getPacketStatus(&rssiPkt, &snrPkt, &signalRssiPkt);
-    return (snrPkt / 4.0);
+    return ((int8_t) snrPkt / 4.0);
 }
 
 int16_t SX126x::signalRssi()
@@ -706,6 +707,21 @@ uint16_t SX126x::getError()
     SX126x_API::getDeviceErrors(&error);
     SX126x_API::clearDeviceErrors();
     return error;
+}
+
+uint32_t SX126x::random()
+{
+    // generate random number from register and previous random number
+    uint8_t buf[4];
+    SX126x_API::readRegister(SX126X_REG_RANDOM_NUMBER_GEN, buf, 4);
+    uint32_t number = ((uint32_t) buf[0] << 24) | ((uint32_t) buf[1] << 16) | ((uint32_t) buf[2] << 8) | ((uint32_t) buf[0]);
+    uint32_t n = _random;
+    number = number ^ ((~n << 16) | n);
+    // combine random number with random number seeded by time
+    srand(millis());
+    number = number ^ (((uint32_t) rand() << 16) | rand());
+    _random = number >> 8;
+    return number;
 }
 
 void SX126x::_irqSetup(uint16_t irqMask)

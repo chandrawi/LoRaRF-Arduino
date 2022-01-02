@@ -125,7 +125,7 @@
 #define SX127X_PIN_NSS                          10
 #define SX127X_PIN_RESET                        4
 #define SX127X_SPI                              SPI
-#define SX127X_SPI_FREQUENCY                    4000000
+#define SX127X_SPI_FREQUENCY                    F_CPU / 2
 
 #ifdef USE_LORA_SX126X
 class SX127x
@@ -137,7 +137,7 @@ class SX127x : public BaseLoRa
 
         SX127x();
 
-        // Common methods
+        // Common Operational methods
         bool begin();
         bool begin(int8_t nss, int8_t reset, int8_t irq=-1, int8_t txen=-1, int8_t rxen=-1);
         void end();
@@ -169,7 +169,7 @@ class SX127x : public BaseLoRa
         void setPayloadLength(uint8_t payloadLength);
         void setCrcEnable(bool crcType=true);
         void setInvertIq(bool invertIq=true);
-        void setSyncWord(uint8_t syncWord);
+        void setSyncWord(uint16_t syncWord);
 
         // Transmit related methods
         void beginPacket();
@@ -181,7 +181,7 @@ class SX127x : public BaseLoRa
         template <typename T> void put(T data)
         {
             const uint8_t length = sizeof(T);
-            union conv{
+            union conv {
                 T Data;
                 uint8_t Binary[length];
             };
@@ -201,7 +201,7 @@ class SX127x : public BaseLoRa
         template <typename T> uint8_t get(T &data)
         {
             const uint8_t length = sizeof(T);
-            union conv{
+            union conv {
                 T Data;
                 uint8_t Binary[length];
             };
@@ -220,6 +220,7 @@ class SX127x : public BaseLoRa
         int16_t packetRssi();
         float snr();
         int16_t rssi();
+        uint32_t random();
 
         // Utilities
         static void writeBits(uint8_t address, uint8_t data, uint8_t position, uint8_t length);
@@ -250,7 +251,9 @@ class SX127x : public BaseLoRa
         static uint8_t _payloadTxRx;
         static int8_t _irqStatic;
         static int8_t _pinToLow;
+        uint16_t _random;
 
+        // Interrupt handler methods
         static void _interruptTx();
         static void _interruptRx();
         static void _interruptRxContinuous();

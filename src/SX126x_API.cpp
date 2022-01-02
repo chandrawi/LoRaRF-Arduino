@@ -252,11 +252,6 @@ void SX126x_API::setTxParams(uint8_t power, uint8_t rampTime)
     _writeBytes(0x8E, buf, 2);
 }
 
-void SX126x_API::setModulationParams(uint8_t* modulationParams)
-{
-    _writeBytes(0x8B, modulationParams, 8);
-}
-
 void SX126x_API::setModulationParamsLoRa(uint8_t sf, uint8_t bw, uint8_t cr, uint8_t ldro)
 {
     uint8_t buf[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -279,10 +274,6 @@ void SX126x_API::setModulationParamsFSK(uint32_t br, uint8_t pulseShape, uint8_t
     buf[6] = Fdev >> 8;
     buf[7] = Fdev;
     _writeBytes(0x8B, buf, 8);
-}
-void SX126x_API::setPacketParams(uint8_t* packetParams)
-{
-    _writeBytes(0x8C, packetParams, 9);
 }
 
 void SX126x_API::setPacketParamsLoRa(uint16_t preambleLength, uint8_t headerType, uint8_t payloadLength, uint8_t crcType, uint8_t invertIq)
@@ -394,7 +385,7 @@ void SX126x_API::getDeviceErrors(uint16_t* opError)
 void SX126x_API::clearDeviceErrors()
 {
     uint8_t buf[2] = {0, 0};
-    _readBytes(0x07, buf, 2);
+    _writeBytes(0x07, buf, 2);
 }
 
 void SX126x_API::fixLoRaBw500(uint32_t bw)
@@ -436,14 +427,7 @@ void SX126x_API::fixInvertedIq(uint8_t invertIq)
 
 void SX126x_API::_writeBytes(uint8_t opCode, uint8_t* data, uint8_t nBytes)
 {
-    if (SX126x_API::busyCheck()) return;
-    
-    digitalWrite(_nss, LOW);
-    _spi->beginTransaction(SPISettings(SX126X_SPI_FREQUENCY, MSBFIRST, SPI_MODE0));
-    _spi->transfer(opCode);
-    for (int8_t i=0; i<nBytes; i++) _spi->transfer(data[i]);
-    _spi->endTransaction();
-    digitalWrite(_nss, HIGH);
+    SX126x_API::_readBytes(opCode, data, nBytes);
 }
 
 void SX126x_API::_readBytes(uint8_t opCode, uint8_t* data, uint8_t nBytes, uint8_t* address, uint8_t nAddress)
@@ -451,10 +435,10 @@ void SX126x_API::_readBytes(uint8_t opCode, uint8_t* data, uint8_t nBytes, uint8
     if (SX126x_API::busyCheck()) return;
     
     digitalWrite(_nss, LOW);
-    _spi->beginTransaction(SPISettings(SX126X_SPI_FREQUENCY, MSBFIRST, SPI_MODE0));
+    _spi->beginTransaction(SPISettings(_spiFrequency, MSBFIRST, SPI_MODE0));
     _spi->transfer(opCode);
     for (int8_t i=0; i<nAddress; i++) _spi->transfer(address[i]);
-    for (int8_t i=0; i<nBytes; i++) data[i] = _spi->transfer(0x00);
+    for (int8_t i=0; i<nBytes; i++) data[i] = _spi->transfer(data[i]);
     _spi->endTransaction();
     digitalWrite(_nss, HIGH);
 }

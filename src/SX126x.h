@@ -33,7 +33,7 @@ class SX126x : public BaseLoRa
 
         SX126x();
 
-        // Common methods
+        // Common Operational methods
         bool begin();
         bool begin(int8_t nss, int8_t reset, int8_t busy, int8_t irq=-1, int8_t txen=-1, int8_t rxen=-1);
         void end();
@@ -90,7 +90,7 @@ class SX126x : public BaseLoRa
         template <typename T> void put(T data)
         {
             const uint8_t length = sizeof(T);
-            union conv{
+            union conv {
                 T Data;
                 uint8_t Binary[length];
             };
@@ -113,7 +113,7 @@ class SX126x : public BaseLoRa
         template <typename T> uint8_t get(T &data)
         {
             const uint8_t length = sizeof(T);
-            union conv{
+            union conv {
                 T Data;
                 uint8_t Binary[length];
             };
@@ -136,16 +136,17 @@ class SX126x : public BaseLoRa
         int16_t signalRssi();
         int16_t rssiInst();
         uint16_t getError();
+        uint32_t random();
 
     protected:
 
         uint8_t _modem;
-        uint8_t _sf;
-        uint32_t _bw;
-        uint8_t _cr;
+        uint8_t _sf = 7;
+        uint32_t _bw = 125000;
+        uint8_t _cr = 4;
         bool _ldro;
-        uint8_t _headerType;
-        uint16_t _preambleLength;
+        uint8_t _headerType = SX126X_HEADER_EXPLICIT;
+        uint16_t _preambleLength = 12;
         uint8_t _payloadLength;
         bool _crcType;
         bool _invertIq;
@@ -165,7 +166,9 @@ class SX126x : public BaseLoRa
         static uint8_t _payloadTxRx;
         static int8_t _irqStatic;
         static int8_t _pinToLow;
+        uint16_t _random;
 
+        // Interrupt handler methods
         void _irqSetup(uint16_t irqMask);
         static void _interruptTx();
         static void _interruptRx();

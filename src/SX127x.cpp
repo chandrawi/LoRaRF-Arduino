@@ -305,9 +305,13 @@ void SX127x::setInvertIq(bool invertIq)
     writeRegister(SX127X_REG_INVERTIQ2, invertIqCfg2);
 }
 
-void SX127x::setSyncWord(uint8_t syncWord)
+void SX127x::setSyncWord(uint16_t syncWord)
 {
-    writeRegister(SX127X_REG_SYNC_WORD, syncWord);
+    uint8_t sw = syncWord;
+    if (syncWord > 0xFF) {
+        sw = ((syncWord >> 8) & 0xF0) | (syncWord & 0x0F);
+    }
+    writeRegister(SX127X_REG_SYNC_WORD, sw);
 }
 
 void SX127x::beginPacket()
@@ -578,7 +582,21 @@ int16_t SX127x::rssi()
 float SX127x::snr()
 {
     // get signal to noise ratio (SNR) of last incoming package
-    return readRegister(SX127X_REG_PKT_SNR_VALUE) / 4.0;
+    return (int8_t) readRegister(SX127X_REG_PKT_SNR_VALUE) / 4.0;
+}
+
+uint32_t SX127x::random()
+{
+    // generate random number from register and previous random number
+    uint32_t n = readRegister(SX127X_REG_RSSI_WIDEBAND);
+    uint32_t number = (n << 24) | ((~n & 0xFF) << 16) | (n << 8) | (~n & 0xFF);
+    n = _random;
+    number = number ^ ((~n << 16) | n);
+    // combine random number with random number seeded by time
+    srand(millis());
+    number = number ^ (((uint32_t) rand() << 16) | rand());
+    _random = number >> 8;
+    return number;
 }
 
 void SX127x::_interruptTx()

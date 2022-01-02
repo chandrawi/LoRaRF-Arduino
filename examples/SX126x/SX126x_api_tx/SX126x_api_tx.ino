@@ -24,17 +24,17 @@ uint8_t deviceSel = 0x00;
 uint8_t power = 0x16;
 
 // Define modulation parameters setting
-uint8_t sf = 7;     // spreading factor 7
-uint8_t bw = 4;     // 125 kHz
-uint8_t cr = 1;     // 4/5 code rate
-uint8_t ldro = 0;   // low data rate optimize off
+uint8_t sf = 7;                               // spreading factor 7
+uint8_t bw = SX126X_BW_125000;                // 125 kHz
+uint8_t cr = SX126X_CR_4_5;                   // 4/5 code rate
+uint8_t ldro = SX126X_LDRO_OFF;               // low data rate optimize off
 
 // Define packet parameters setting
 uint16_t preambleLength = 12;                 // 12 bytes preamble
 uint8_t headerType = SX126X_HEADER_EXPLICIT;  // explicit packet header
 uint8_t payloadLength = 64;                   // 64 bytes payload
-uint8_t crcType = 1;                          // cyclic redundancy check (CRC) on
-uint8_t invertIq = 0;                         // standard IQ setup
+uint8_t crcType = SX126X_CRC_ON;              // cyclic redundancy check (CRC) on
+uint8_t invertIq = SX126X_IQ_STANDARD;        // standard IQ setup
 
 // SyncWord setting
 uint8_t sw[2] = {0x34, 0x44};
@@ -95,7 +95,7 @@ void settingFunction() {
 #endif
 #ifdef SX126X_XTAL
   Serial.println("Set RF module to use XTAL as clock reference");
-  Api.writeRegister(0x0911, xtalCap, 2);
+  Api.writeRegister(SX126X_REG_XTA_TRIM, xtalCap, 2);
 #endif
 
   // Set to standby mode and set packet type to LoRa
@@ -129,7 +129,7 @@ void settingFunction() {
   // Set predefined syncronize word
   Serial.print("Set syncWord to 0x");
   Serial.println((sw[0] << 8) + sw[1], HEX);
-  Api.writeRegister(0x0740, sw, 2);
+  Api.writeRegister(SX126X_REG_LORA_SYNC_WORD_MSB, sw, 2);
 
 }
 
