@@ -22,10 +22,10 @@
 // Default Hardware Configuration
 #define SX126X_PIN_RF_IRQ                             1
 
-#ifdef USE_LORA_SX126X
-class SX126x
-#else
+#if defined(USE_LORA_SX126X) && defined(USE_LORA_SX127X)
 class SX126x : public BaseLoRa
+#else
+class SX126x
 #endif
 {
 

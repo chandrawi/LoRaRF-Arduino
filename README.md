@@ -2,14 +2,14 @@
 [![GitHub issues](https://img.shields.io/github/issues/chandrawi/LoRaRF-Arduino)](https://github.com/chandrawi/LoRaRF-Arduino/issues)
 [![GitHub forks](https://img.shields.io/github/forks/chandrawi/LoRaRF-Arduino)](https://github.com/chandrawi/LoRaRF-Arduino/network)
 [![GitHub stars](https://img.shields.io/github/stars/chandrawi/LoRaRF-Arduino)](https://github.com/chandrawi/LoRaRF-Arduino/stargazers)
-[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/chandrawi/LoRaRF-Arduino)](https://github.com/chandrawi/LoRaRF-Arduino/tree/1.2.0)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/chandrawi/LoRaRF-Arduino)](https://github.com/chandrawi/LoRaRF-Arduino/tree/2.0.0)
 [![GitHub license](https://img.shields.io/github/license/chandrawi/LoRaRF-Arduino)](https://github.com/chandrawi/LoRaRF-Arduino/blob/main/LICENSE)
 
-# LoRa-RF
+# LoRa-RF Arduino Library
 
-Arduino LoRa-RF library used for transmitting and receiving data using LoRa module with Semtech SX126x series, SX127x series, or LLCC68. The library works by interfacing SPI port and some I/O pins. This library support for configuring frequency, modulation parameter, transmit power, receive gain and other RF parameters on both LoRa and FSK modulation also support for handling transmit and receive using interrupt signal.
+Arduino LoRa-RF library used for transmitting and receiving data using LoRa module with Semtech SX126x series, SX127x series, or LLCC68. The library works by interfacing SPI port and some I/O pins. Support for configuring frequency, modulation parameter, transmit power, receive gain and other RF parameters on both LoRa and FSK modulation also support for handling transmit and receive using interrupt signal.
 
-This readme written for quick start guide. Visit this [link](https://github.com/chandrawi/LoRaRF-Arduino/wiki) for complete documentation.
+This readme is written for quick start guide. Visit this [link](https://github.com/chandrawi/LoRaRF-Arduino/wiki) for complete documentation.
 
 ## Hardware Compatibility
 
@@ -37,24 +37,23 @@ Open terminal, Git bash, or command prompt in Arduino library folder then run fo
 git clone https://github.com/chandrawi/LoRaRF-Arduino.git
 ```
 
-## Using LoRaRF Library
+## Initialization
 
-First you must include `SX126x` header or `SX127x` header depending LoRa module you use. For LLCC68 include SX126x header. Then create an object from class in header you just import.
+To work with the library, first you must include `SX126x` header or `SX127x` header depending LoRa module you use. For LLCC68 include SX126x header. Then initialize class in the header by creating an object.
 
-```
-#include <SX126x.h>
-#include <SX127x.h>
-
+```C++
 // for SX126x series or LLCC68
+#include <SX126x.h>
 SX126x LoRa;
 
 // for SX127x series
+#include <SX127x.h>
 SX127x LoRa;
 ```
 
 Before calling any configuration methods, doing transmit or receive operation you must call `begin()` method. You can call `begin()` method inside Arduino `setup()` function.
 
-```
+```C++
 void setup() {
   LoRa.begin();
   // configuration code goes here
@@ -90,7 +89,7 @@ The default Arduino pins used for connecting to SX126x and SX127x are as follows
 ### SPI Port Configuration
 
 To change Arduino default SPI port or SPI frequency call `setSPI()` method before `begin()` method.
-```
+```C++
 LoRa.setSPI(SPI2, F_CPU/2);
 LoRa.begin();
 ```
@@ -98,7 +97,7 @@ LoRa.begin();
 ### I/O Pins Configuration
 
 To configure I/O pins (NSS, RESET, BUSY, IRQ, TXEN, RXEN pin) call `setPins()` before `begin()` method.
-```
+```C++
 // set NSS->10, RESET->9, BUSY->4, DIO1->2, TXEN->8, RXEN->7 for SX126x series
 LoRa.setPins(10, 9, 2, 4, 8, 7);
 // set NSS->10, RESET->9, DIO0->2, TXEN->8, RXEN->7 for SX127x series
@@ -108,20 +107,20 @@ LoRa.begin();
 
 ## Modem Configuration
 
-Before transmit or receive operation you can configure transmit power and receive gain or matching frequency, modulation parameter, packet parameter, and synchronize word with other LoRa device you want connect.
+Before transmit or receive operation you can configure transmit power and receive gain or matching frequency, modulation parameter, packet parameter, and synchronize word with other LoRa device you want communicate.
 
 ### Transmit Power
 
-```
+```C++
 // set transmit power to +22 dBm for SX1262
-LoRa.setTxPower(17, SX126X_TX_POWER_SX1262);
+LoRa.setTxPower(22, SX126X_TX_POWER_SX1262);
 // set transmit power to +20 dBm for SX127x series using boost pin
-LoRa.setTxPower(17, SX127X_TX_POWER_PA_BOOST);
+LoRa.setTxPower(20, SX127X_TX_POWER_PA_BOOST);
 ```
 
 ### Receive Gain
 
-```
+```C++
 // set receive gain to power saving
 LoRa.setRxGain(LORA_RX_GAIN_POWER_SAVING);
 // set receive gain to boosted and AGC on for SX127x series
@@ -130,28 +129,28 @@ LoRa.setRxGain(LORA_RX_GAIN_BOOSTED, true);
 
 ### Frequency
 
-```
+```C++
 // Set frequency to 915 Mhz
 LoRa.setFrequency(915000000);
 ```
 
 ### Modulation Parameter
 
-```
+```C++
 // set spreading factor 8, bandwidth 125 kHz, coding rate 4/5, and low data rate optimization off
 LoRa.setLoRaModulation(8, 125000, 5, false);
 ```
 
 ### Packet Parameter
 
-```
+```C++
 // set explicit header mode, preamble length 12, payload length 15, CRC on and no invert IQ operation
 LoRa.setLoRaPacket(LORA_HEADER_EXPLICIT, 12, 15, true, false);
 ```
 
 ### Synchronize Word
 
-```
+```C++
 // Set syncronize word for public network (0x3444)
 LoRa.setSyncWord(0x3444);
 ```
@@ -160,7 +159,7 @@ LoRa.setSyncWord(0x3444);
 
 Transmit operation begin with calling `beginPacket()` method following by `write()` method to write package to be tansmitted and ended with calling `endPacket()` method. For example, to transmit "HeLoRa World!" message and an increment counter you can use following code.
 
-```
+```C++
 // message and counter to transmit
 char message[] = "HeLoRa World!";
 uint8_t counter = 0;
@@ -172,13 +171,13 @@ LoRa.endPacket();
 LoRa.wait();
 ```
 
-For more detail about transmit operation, please visit this [link](https://github.com/chandrawi/LoRaRF-Arduino/wiki).
+For more detail about transmit operation, please visit this [link](https://github.com/chandrawi/LoRaRF-Arduino/wiki/Transmit-Operation).
 
 ## Receive Operation
 
 Receive operation begin with calling `request()` method following by `read()` method to read received package. `available()` method can be used to get length of remaining package. For example, to receive message and a counter in last byte you can use following code.
 
-```
+```C++
 LoRa.request();
 LoRa.wait();
 
@@ -192,12 +191,16 @@ while (LoRa.available() > 1){
 uint8_t counter = LoRa.read();        // read single byte
 ```
 
-For more detail about receive operation, please visit this [link](https://github.com/chandrawi/LoRaRF-Arduino/wiki).
+For more detail about receive operation, please visit this [link](https://github.com/chandrawi/LoRaRF-Arduino/wiki/Receive-Operation).
 
 ## Examples
 
 See examples for [SX126x](https://github.com/chandrawi/LoRaRF-Arduino/tree/main/examples/SX126x), [SX127x](https://github.com/chandrawi/LoRaRF-Arduino/tree/main/examples/SX127x), and [simple network implementation](https://github.com/chandrawi/LoRaRF-Arduino/tree/main/examples/Network).
 
-## Licence
+## License
 
-This library published under [MIT licence](https://github.com/chandrawi/LoRaRF-Arduino/blob/main/LICENSE).
+This library published under [MIT license](https://github.com/chandrawi/LoRaRF-Arduino/blob/main/LICENSE).
+
+## Contributor
+
+[Chandra Wijaya Sentosa](https://github.com/chandrawi) <<chandra.w.sentosa@gmail.com>>

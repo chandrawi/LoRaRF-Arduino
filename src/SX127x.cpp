@@ -494,6 +494,7 @@ bool SX127x::wait(uint32_t timeout)
         irqFlag = readRegister(SX127X_REG_IRQ_FLAGS);
         // return when timeout reached
         if (millis() - t > timeout && timeout != 0) return false;
+        yield();
     }
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     _spi->notUsingInterrupt(_irqStatic);

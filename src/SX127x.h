@@ -127,10 +127,10 @@
 #define SX127X_SPI                              SPI
 #define SX127X_SPI_FREQUENCY                    F_CPU / 2
 
-#ifdef USE_LORA_SX126X
-class SX127x
-#else
+#if defined(USE_LORA_SX126X) && defined(USE_LORA_SX127X)
 class SX127x : public BaseLoRa
+#else
+class SX127x
 #endif
 {
     public:

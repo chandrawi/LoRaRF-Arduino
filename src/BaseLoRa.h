@@ -35,9 +35,9 @@
 #define LORA_STATUS_CAD_DETECTED                11
 #define LORA_STATUS_CAD_DONE                    12
 
-// Uncomment one of line below to use a LoRa model exclusively
+// Uncomment one of line below to use one or more LoRa model for a network library
 #define USE_LORA_SX126X
-#define USE_LORA_SX127X
+// #define USE_LORA_SX127X
 
 class BaseLoRa
 {
@@ -45,11 +45,11 @@ class BaseLoRa
     public:
 
         virtual void beginPacket();
-        virtual void endPacket(uint32_t timeout, bool intFlag);
+        virtual bool endPacket(uint32_t timeout, bool intFlag);
         virtual void write(uint8_t data);
         virtual void write(uint8_t* data, uint8_t length);
 
-        virtual void request(uint32_t timeout, bool intFlag);
+        virtual bool request(uint32_t timeout, bool intFlag);
         virtual uint8_t available();
         virtual uint8_t read();
         virtual uint8_t read(uint8_t* data, uint8_t length);

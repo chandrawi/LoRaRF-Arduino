@@ -9,7 +9,7 @@ void setup() {
 
   // Begin LoRa radio and set NSS, reset, txen, and rxen pin with connected arduino pins
   Serial.println("Begin LoRa radio");
-  int8_t nssPin = 10, resetPin = 9, irqPin = 2, txenPin = 8, rxenPin = 7;
+  int8_t nssPin = 10, resetPin = 9, irqPin = -1, txenPin = 8, rxenPin = 7;
   if (!LoRa.begin(nssPin, resetPin, irqPin, txenPin, rxenPin)){
     Serial.println("Something wrong, can't begin LoRa radio");
     while(1);

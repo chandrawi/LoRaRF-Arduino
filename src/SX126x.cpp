@@ -612,6 +612,7 @@ bool SX126x::wait(uint32_t timeout)
         SX126x_API::getIrqStatus(&irqStat);
         // return when timeout reached
         if (millis() - t > timeout && timeout != 0) return false;
+        yield();
     }
 
     if (_statusIrq) {
