@@ -37,7 +37,7 @@
 
 // Uncomment one of line below to use one or more LoRa model for a network library
 #define USE_LORA_SX126X
-// #define USE_LORA_SX127X
+#define USE_LORA_SX127X
 
 class BaseLoRa
 {

@@ -91,9 +91,10 @@
 #define SX126X_DIO3_OUTPUT_2_7                  0x05        //                               2.7 V
 #define SX126X_DIO3_OUTPUT_3_0                  0x06        //                               3.0 V
 #define SX126X_DIO3_OUTPUT_3_3                  0x07        //                               3.3 V
-#define SX126X_TCXO_DELAY_2_5                   0x0140      // TCXO delay time: 2.5 ms
-#define SX126X_TCXO_DELAY_5                     0x0280      //                  5 ms
-#define SX126X_TCXO_DELAY_10                    0x0560      //                  10 ms
+#define SX126X_TCXO_DELAY_1                     0x0040      // TCXO delay time: 1 ms
+#define SX126X_TCXO_DELAY_2                     0x0080      //                  2 ms
+#define SX126X_TCXO_DELAY_5                     0x0140      //                  5 ms
+#define SX126X_TCXO_DELAY_10                    0x0280      //                  10 ms
 
 // SetRfFrequency
 #define SX126X_RF_FREQUENCY_XTAL                32000000    // XTAL frequency used for RF frequency calculation
@@ -243,7 +244,7 @@ class SX126x_API
 
         static void setSPI(SPIClass &SpiObject, uint32_t frequency);
         static void setPins(int8_t nss, int8_t busy);
-        static bool reset(int8_t reset);
+        static void reset(int8_t reset);
         static void begin();
         static bool busyCheck(uint32_t timeout=SX126X_BUSY_TIMEOUT);
 

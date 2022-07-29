@@ -54,7 +54,7 @@ class SX126x
         void setDio3TcxoCtrl(uint8_t tcxoVoltage, uint32_t delayTime);
         void setXtalCap(uint8_t xtalA, uint8_t xtalB);
         void setRegulator(uint8_t regMode);
-        void setCurrentProtection(uint8_t level);
+        void setCurrentProtection(uint8_t current);
 
         // Modem, modulation parameter, and packet parameter setup methods
         void setModem(uint8_t modem=SX126X_LORA_MODEM);

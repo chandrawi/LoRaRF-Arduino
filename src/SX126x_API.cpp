@@ -20,11 +20,11 @@ void SX126x_API::setPins(int8_t nss, int8_t busy)
     _busy = busy;
 }
 
-bool SX126x_API::reset(int8_t reset)
+void SX126x_API::reset(int8_t reset)
 {
     pinMode(reset, OUTPUT);
     digitalWrite(reset, LOW);
-    delay(1);
+    delayMicroseconds(500);
     digitalWrite(reset, HIGH);
 }
 

@@ -65,7 +65,7 @@ bool SX127x::reset()
     digitalWrite(_reset, LOW);
     delay(1);
     digitalWrite(_reset, HIGH);
-    delay(10);
+    delay(5);
     // wait until device connected, return false when device too long to respond
     uint32_t t = millis();
     uint8_t version = 0x00;

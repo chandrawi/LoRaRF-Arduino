@@ -162,9 +162,10 @@ void SX126x::setRegulator(uint8_t regMode)
     SX126x_API::setRegulatorMode(regMode);
 }
 
-void SX126x::setCurrentProtection(uint8_t level)
+void SX126x::setCurrentProtection(uint8_t current)
 {
-    SX126x_API::writeRegister(SX126X_REG_OCP_CONFIGURATION, &level, 1);
+    uint8_t currentmA = current * 2 / 5;
+    SX126x_API::writeRegister(SX126X_REG_OCP_CONFIGURATION, &currentmA, 1);
 }
 
 void SX126x::setModem(uint8_t modem)
