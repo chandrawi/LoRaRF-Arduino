@@ -425,7 +425,7 @@ void SX126x::beginPacket()
     SX126x_API::fixLoRaBw500(_bw);
 }
 
-bool SX126x::endPacket(uint32_t timeout, bool intFlag)
+bool SX126x::endPacket(uint32_t timeout)
 {
     // skip to enter TX mode when previous TX operation incomplete
     if (getMode() == SX126X_STATUS_MODE_TX) return false;
@@ -448,15 +448,10 @@ bool SX126x::endPacket(uint32_t timeout, bool intFlag)
     _transmitTime = millis();
 
     // set operation status to wait and attach TX interrupt handler
-    if (_irq != -1 && intFlag) {
+    if (_irq != -1) {
         attachInterrupt(_irqStatic, SX126x::_interruptTx, RISING);
     }
     return true;
-}
-
-bool SX126x::endPacket(bool intFlag)
-{
-    return endPacket(SX126X_TX_SINGLE, intFlag);
 }
 
 void SX126x::write(uint8_t data)
@@ -484,7 +479,7 @@ void SX126x::write(char* data, uint8_t length)
     _payloadTxRx += length;
 }
 
-bool SX126x::request(uint32_t timeout, bool intFlag)
+bool SX126x::request(uint32_t timeout)
 {
     // skip to enter RX mode when previous RX operation incomplete
     if (getMode() == SX126X_STATUS_MODE_RX) return false;
@@ -514,7 +509,7 @@ bool SX126x::request(uint32_t timeout, bool intFlag)
     SX126x_API::setRx(rxTimeout);
 
     // set operation status to wait and attach RX interrupt handler
-    if (_irq != -1 && intFlag) {
+    if (_irq != -1) {
         if (timeout == SX126X_RX_CONTINUOUS) {
             attachInterrupt(_irqStatic, SX126x::_interruptRxContinuous, RISING);
         } else {
@@ -524,7 +519,7 @@ bool SX126x::request(uint32_t timeout, bool intFlag)
     return true;
 }
 
-bool SX126x::listen(uint32_t rxPeriod, uint32_t sleepPeriod, bool intFlag)
+bool SX126x::listen(uint32_t rxPeriod, uint32_t sleepPeriod)
 {
     // skip to enter RX mode when previous RX operation incomplete
     if (getMode() == SX126X_STATUS_MODE_RX) return false;
@@ -552,7 +547,7 @@ bool SX126x::listen(uint32_t rxPeriod, uint32_t sleepPeriod, bool intFlag)
     SX126x_API::setRxDutyCycle(rxPeriod, sleepPeriod);
 
     // set operation status to wait and attach RX interrupt handler
-    if (_irq != -1 && intFlag) {
+    if (_irq != -1) {
         attachInterrupt(_irqStatic, SX126x::_interruptRx, RISING);
     }
     return true;
@@ -604,13 +599,14 @@ void SX126x::purge(uint8_t length)
 bool SX126x::wait(uint32_t timeout)
 {
     // immediately return when currently not waiting transmit or receive process
-    if (_statusIrq) return false;
+    if (_statusIrq) return true;
 
-    // wait transmit or receive process finish by checking IRQ status
+    // wait transmit or receive process finish by checking interrupt status or IRQ status
     uint16_t irqStat = 0x0000;
     uint32_t t = millis();
     while (irqStat == 0x0000 && _statusIrq == 0x0000) {
-        SX126x_API::getIrqStatus(&irqStat);
+        // only check IRQ status register for non interrupt operation
+        if (_irq == -1) SX126x_API::getIrqStatus(&irqStat);
         // return when timeout reached
         if (millis() - t > timeout && timeout != 0) return false;
         yield();
@@ -618,7 +614,7 @@ bool SX126x::wait(uint32_t timeout)
 
     if (_statusIrq) {
         // immediately return when interrupt signal hit
-        return false;
+        return true;
     } else if (_statusWait == SX126X_STATUS_TX_WAIT) {
         // for transmit, calculate transmit time and set back txen pin to low
         _transmitTime = millis() - _transmitTime;

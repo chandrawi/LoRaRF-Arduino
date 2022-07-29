@@ -173,8 +173,7 @@ class SX127x
 
         // Transmit related methods
         void beginPacket();
-        bool endPacket(uint32_t timeout, bool intFlag=true);
-        bool endPacket(bool intFlag=true);
+        bool endPacket(uint32_t timeout=0);
         void write(uint8_t data);
         void write(uint8_t* data, uint8_t length);
         void write(char* data, uint8_t length);
@@ -192,7 +191,7 @@ class SX127x
         void onTransmit(void(&callback)());
 
         // Receive related methods
-        bool request(uint32_t timeout=SX127X_RX_SINGLE, bool intFlag=true);
+        bool request(uint32_t timeout=SX127X_RX_SINGLE);
         uint8_t available();
         uint8_t read();
         uint8_t read(uint8_t* data, uint8_t length);

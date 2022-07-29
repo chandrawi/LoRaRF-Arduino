@@ -328,12 +328,7 @@ void SX127x::beginPacket()
     }
 }
 
-bool SX127x::endPacket(uint32_t timeout, bool intFlag)
-{
-    return endPacket(intFlag);
-}
-
-bool SX127x::endPacket(bool intFlag)
+bool SX127x::endPacket(uint32_t timeout)
 {
     // skip to enter TX mode when previous TX operation incomplete
     if (readRegister(SX127X_REG_OP_MODE) & 0x07 == SX127X_MODE_TX) return false;
@@ -353,7 +348,7 @@ bool SX127x::endPacket(bool intFlag)
     _transmitTime = millis();
 
     // set TX done interrupt on DIO0 and attach TX interrupt handler
-    if (_irq != -1 && intFlag) {
+    if (_irq != -1) {
         writeRegister(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_TX_DONE);
         attachInterrupt(_irqStatic, SX127x::_interruptTx, RISING);
     }
@@ -383,7 +378,7 @@ void SX127x::write(char* data, uint8_t length)
     write(data_, length);
 }
 
-bool SX127x::request(uint32_t timeout, bool intFlag)
+bool SX127x::request(uint32_t timeout)
 {
     // skip to enter RX mode when previous RX operation incomplete
     uint8_t rxMode = readRegister(SX127X_REG_OP_MODE) & 0x07;
@@ -420,7 +415,7 @@ bool SX127x::request(uint32_t timeout, bool intFlag)
     writeRegister(SX127X_REG_OP_MODE, _modem | rxMode);
 
     // set RX done interrupt on DIO0 and attach RX interrupt handler
-    if (_irq != -1 && intFlag) {
+    if (_irq != -1) {
         writeRegister(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_RX_DONE);
         if (timeout == SX127X_RX_CONTINUOUS) {
             attachInterrupt(_irqStatic, SX127x::_interruptRxContinuous, RISING);
@@ -478,12 +473,9 @@ void SX127x::purge(uint8_t length)
 bool SX127x::wait(uint32_t timeout)
 {
     // immediately return when currently not waiting transmit or receive process
-    if (_statusIrq) return false;
+    if (_statusIrq) return true;
 
-#ifdef SPI_HAS_NOTUSINGINTERRUPT
-    _spi->usingInterrupt(_irqStatic);
-#endif
-    // wait transmit or receive process finish by checking IRQ status
+    // wait transmit or receive process finish by checking interrupt status or IRQ status
     uint8_t irqFlag = 0x00;
     uint8_t irqFlagMask = _statusWait == SX127X_STATUS_TX_WAIT 
         ? SX127X_IRQ_TX_DONE 
@@ -491,18 +483,16 @@ bool SX127x::wait(uint32_t timeout)
     ;
     uint32_t t = millis();
     while (!(irqFlag & irqFlagMask) && _statusIrq == 0x00) {
-        irqFlag = readRegister(SX127X_REG_IRQ_FLAGS);
+        // only check IRQ status register for non interrupt operation
+        if (_irq == -1) irqFlag = readRegister(SX127X_REG_IRQ_FLAGS);
         // return when timeout reached
         if (millis() - t > timeout && timeout != 0) return false;
         yield();
     }
-#ifdef SPI_HAS_NOTUSINGINTERRUPT
-    _spi->notUsingInterrupt(_irqStatic);
-#endif
 
     if (_statusIrq) {
         // immediately return when interrupt signal hit
-        return false;
+        return true;
 
     } else if (_statusWait == SX127X_STATUS_TX_WAIT) {
         // calculate transmit time and set back txen pin to low

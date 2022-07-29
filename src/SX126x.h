@@ -82,8 +82,7 @@ class SX126x
 
         // Transmit related methods
         void beginPacket();
-        bool endPacket(uint32_t timeout=SX126X_TX_SINGLE, bool intFlag=true);
-        bool endPacket(bool intFlag);
+        bool endPacket(uint32_t timeout=SX126X_TX_SINGLE);
         void write(uint8_t data);
         void write(uint8_t* data, uint8_t length);
         void write(char* data, uint8_t length);
@@ -103,8 +102,8 @@ class SX126x
         void onTransmit(void(&callback)());
 
         // Receive related methods
-        bool request(uint32_t timeout=SX126X_RX_SINGLE, bool intFlag=true);
-        bool listen(uint32_t rxPeriod, uint32_t sleepPeriod, bool intFlag=true);
+        bool request(uint32_t timeout=SX126X_RX_SINGLE);
+        bool listen(uint32_t rxPeriod, uint32_t sleepPeriod);
         uint8_t available();
         uint8_t read();
         uint8_t read(uint8_t* data, uint8_t length);
