@@ -28,12 +28,6 @@ SX127x::SX127x()
 
 bool SX127x::begin()
 {
-    // set pins as input or output
-    pinMode(_nss, OUTPUT);
-    if (_irq != -1) pinMode(_irq, INPUT);
-    if (_txen != -1) pinMode(_txen, OUTPUT);
-    if (_rxen != -1) pinMode(_rxen, OUTPUT);
-
     // begin spi and perform device reset
     _spi->begin();
     if (!SX127x::reset()) return false;
@@ -60,7 +54,7 @@ void SX127x::end()
 
 bool SX127x::reset()
 {
-    // put reset pin to low then wait 10 ms
+    // put reset pin to low then wait 5 ms
     pinMode(_reset, OUTPUT);
     digitalWrite(_reset, LOW);
     delay(1);
@@ -116,6 +110,13 @@ void SX127x::setPins(int8_t nss, int8_t reset, int8_t irq, int8_t txen, int8_t r
     _txen = txen;
     _rxen = rxen;
     _irqStatic = digitalPinToInterrupt(_irq);
+
+    // set pins as input or output
+    pinMode(_nss, OUTPUT);
+    if (_irq != -1) pinMode(_irq, INPUT);
+    if (_txen != -1) pinMode(_txen, OUTPUT);
+    if (_rxen != -1) pinMode(_rxen, OUTPUT);
+
 }
 
 void SX127x::setCurrentProtection(uint8_t current)
