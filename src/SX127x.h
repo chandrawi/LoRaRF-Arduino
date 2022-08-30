@@ -125,7 +125,11 @@
 #define SX127X_PIN_NSS                          10
 #define SX127X_PIN_RESET                        4
 #define SX127X_SPI                              SPI
-#define SX127X_SPI_FREQUENCY                    F_CPU / 2
+#ifdef __AVR__
+    #define SX127X_SPI_FREQUENCY                F_CPU / 2   // SPI speed set to half of CPU frequency for AVR processor
+#else
+    #define SX127X_SPI_FREQUENCY                16000000    // Maximum LoRa SPI frequency
+#endif
 
 #if defined(USE_LORA_SX126X) && defined(USE_LORA_SX127X)
 class SX127x : public BaseLoRa

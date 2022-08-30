@@ -234,7 +234,11 @@
 #define SX126X_PIN_RESET                        4
 #define SX126X_PIN_BUSY                         5
 #define SX126X_SPI                              SPI
-#define SX126X_SPI_FREQUENCY                    F_CPU / 2
+#ifdef __AVR__
+    #define SX126X_SPI_FREQUENCY                F_CPU / 2   // SPI speed set to half of CPU frequency for AVR processor
+#else
+    #define SX126X_SPI_FREQUENCY                16000000    // Maximum LoRa SPI frequency
+#endif
 #define SX126X_BUSY_TIMEOUT                     5000        // Default timeout for checking busy pin
 
 class SX126x_API

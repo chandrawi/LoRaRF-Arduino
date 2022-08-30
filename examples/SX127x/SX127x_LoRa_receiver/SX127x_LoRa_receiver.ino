@@ -7,6 +7,10 @@ void setup() {
   // Begin serial communication
   Serial.begin(38400);
 
+  // Uncomment below to use non default SPI port
+  //SPIClass SPI_2(PB15, PB14, PB13);
+  //LoRa.setSPI(SPI_2, 16000000);
+
   // Begin LoRa radio and set NSS, reset, txen, and rxen pin with connected arduino pins
   // IRQ pin not used in this example (set to -1). Set txen and rxen pin to -1 if RF module doesn't have one
   Serial.println("Begin LoRa radio");
