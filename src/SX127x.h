@@ -257,9 +257,16 @@ class SX127x
         uint16_t _random;
 
         // Interrupt handler methods
+#ifdef ESP8266
+        static void ICACHE_RAM_ATTR _interruptTx();
+        static void ICACHE_RAM_ATTR _interruptRx();
+        static void ICACHE_RAM_ATTR _interruptRxContinuous();
+#else
         static void _interruptTx();
         static void _interruptRx();
         static void _interruptRxContinuous();
+#endif
+
         static uint8_t _transfer(uint8_t address, uint8_t data);
 
 };

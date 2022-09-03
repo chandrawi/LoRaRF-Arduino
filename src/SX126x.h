@@ -169,9 +169,15 @@ class SX126x
 
         // Interrupt handler methods
         void _irqSetup(uint16_t irqMask);
+#ifdef ESP8266
+        static void ICACHE_RAM_ATTR _interruptTx();
+        static void ICACHE_RAM_ATTR _interruptRx();
+        static void ICACHE_RAM_ATTR _interruptRxContinuous();
+#else
         static void _interruptTx();
         static void _interruptRx();
         static void _interruptRxContinuous();
+#endif
 
 };
 
