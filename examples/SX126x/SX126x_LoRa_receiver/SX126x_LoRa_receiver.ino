@@ -32,7 +32,11 @@ void setup() {
   //uint8_t xtalB = 0x12;
   //Serial.println("Set RF module to use XTAL as clock reference");
   //LoRa.setXtalCap(xtalA, xtalB);
-  
+
+  // Optionally configure DIO2 as RF switch control
+  // This is usually used for a LoRa module without TXEN and RXEN pins
+  //LoRa.setDio2RfSwitch(true);
+
   // Set frequency to 915 Mhz
   Serial.println("Set frequency to 915 Mhz");
   LoRa.setFrequency(915000000);

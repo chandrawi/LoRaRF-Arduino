@@ -1,6 +1,4 @@
-#include <SX126x_API.h>
-
-SX126x_API Api;
+#include <SX126x_driver.h>
 
 // Pin setting
 int8_t nssPin = 10, resetPin = 9, busyPin = 4, irqPin = 2, rxenPin = 7, txenPin = 8;
@@ -13,6 +11,9 @@ int8_t nssPin = 10, resetPin = 9, busyPin = 4, irqPin = 2, rxenPin = 7, txenPin 
 #define SX126X_TCXO
 uint8_t dio3Voltage = SX126X_DIO3_OUTPUT_1_8;
 uint32_t tcxoDelay = SX126X_TCXO_DELAY_10;
+
+// Configure DIO2 as RF switch control or using TXEN and RXEN pin
+#define SX126X_USING_TXEN_RXEN
 
 // RF frequency setting
 uint32_t rfFrequency = 915000000UL;
@@ -83,54 +84,70 @@ void settingFunction() {
 
   // Pin setting
   Serial.println("Setting pins");
-  Api.setPins(nssPin, busyPin);
+  sx126x_setPins(nssPin, busyPin);
+  pinMode(irqPin, INPUT);
 
   // Reset RF module by setting resetPin to LOW and begin SPI communication
   Serial.println("Resetting RF module");
-  Api.reset(resetPin);
-  Api.begin();
+  sx126x_reset(resetPin);
+  sx126x_begin();
+
+  // Set to standby mode
+  sx126x_setStandby(SX126X_STANDBY_RC);
+  if (!sx126x_busyCheck()) {
+    Serial.println("Going to standby mode");
+  } else {
+    Serial.println("Something wrong, can't set to standby mode");
+  }
 
   // Optionally configure TCXO or XTAL used in RF module
 #ifdef SX126X_TCXO
   Serial.println("Set RF module to use TCXO as clock reference");
-  Api.setDio3AsTcxoCtrl(dio3Voltage, tcxoDelay);
+  sx126x_setDio3AsTcxoCtrl(dio3Voltage, tcxoDelay);
 #endif
 #ifdef SX126X_XTAL
   Serial.println("Set RF module to use XTAL as clock reference");
-  Api.writeRegister(SX126X_REG_XTA_TRIM, xtalCap, 2);
+  sx126x_writeRegister(SX126X_REG_XTA_TRIM, xtalCap, 2);
 #endif
 
-  // Set to standby mode and set packet type to LoRa
-  Serial.println("Going to standby mode");
-  Api.setStandby(SX126X_STANDBY_RC);
+  // Optionally configure DIO2 as RF switch control
+#ifdef SX126X_USING_TXEN_RXEN
+  pinMode(txenPin, OUTPUT);
+  pinMode(rxenPin, OUTPUT);
+#else
+  Serial.println("Set RF switch is controlled by DIO2");
+  sx126x_setDio2AsRfSwitchCtrl(SX126X_DIO2_AS_RF_SWITCH);
+#endif
+
+  // Set packet type to LoRa
   Serial.println("Set packet type to LoRa");
-  Api.setPacketType(SX126X_LORA_MODEM);
+  sx126x_setPacketType(SX126X_LORA_MODEM);
 
   // Set frequency to selected frequency (rfFrequency = rfFreq * 32000000 / 2 ^ 25)
   Serial.print("Set frequency to ");
   Serial.print(rfFrequency / 1000000);
   Serial.println(" Mhz");
   uint32_t rfFreq = ((uint64_t) rfFrequency * 33554432UL) / 32000000UL;
-  Api.setRfFrequency(rfFreq);
+  sx126x_setRfFrequency(rfFreq);
 
   // Set rx gain to selected gain
   Serial.print("Set RX gain to ");
   if (gain == SX126X_POWER_SAVING_GAIN) Serial.println("power saving gain");
   else if (gain == SX126X_BOOSTED_GAIN) Serial.println("boosted gain");
-  Api.writeRegister(SX126X_REG_RX_GAIN, &gain, 1);
+  sx126x_writeRegister(SX126X_REG_RX_GAIN, &gain, 1);
   
   // Configure modulation parameter with predefined spreading factor, bandwidth, coding rate, and low data rate optimize setting
   Serial.println("Set modulation with predefined parameters");
-  Api.setModulationParamsLoRa(sf, bw, cr, ldro);
+  sx126x_setModulationParamsLoRa(sf, bw, cr, ldro);
 
   // Configure packet parameter with predefined preamble length, header mode type, payload length, crc type, and invert iq option
   Serial.println("Set packet with predefined parameters");
-  Api.setPacketParamsLoRa(preambleLength, headerType, payloadLength, crcType, invertIq);
+  sx126x_setPacketParamsLoRa(preambleLength, headerType, payloadLength, crcType, invertIq);
 
   // Set predefined syncronize word
   Serial.print("Set syncWord to 0x");
   Serial.println((sw[0] << 8) + sw[1], HEX);
-  Api.writeRegister(SX126X_REG_LORA_SYNC_WORD_MSB, sw, 2);
+  sx126x_writeRegister(SX126X_REG_LORA_SYNC_WORD_MSB, sw, 2);
 
 }
 
@@ -141,21 +158,23 @@ uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
   // Activate interrupt when receive done on DIO1
   Serial.println("Set RX done, timeout, and CRC error IRQ on DIO1");
   uint16_t mask = SX126X_IRQ_RX_DONE | SX126X_IRQ_TIMEOUT | SX126X_IRQ_CRC_ERR;
-  Api.setDioIrqParams(mask, mask, SX126X_IRQ_NONE, SX126X_IRQ_NONE);
+  sx126x_setDioIrqParams(mask, mask, SX126X_IRQ_NONE, SX126X_IRQ_NONE);
 
   // Calculate timeout (timeout duration = timeout * 15.625 us)
   uint32_t tOut = timeout * 64;
   if (timeout == SX126X_RX_CONTINUOUS) tOut = SX126X_RX_CONTINUOUS;
   // Set RF module to RX mode to receive message
   Serial.println("Receiving LoRa packet within predefined timeout");
-  Api.setRx(tOut);
+  sx126x_setRx(tOut);
 
   // Attach irqPin to DIO1
   Serial.println("Attach interrupt on pin 2 (irqPin)");
   attachInterrupt(digitalPinToInterrupt(irqPin), checkReceiveDone, RISING);
   // Set txen and rxen pin state for receiving packet
+#ifdef SX126X_USING_TXEN_RXEN
   digitalWrite(txenPin, LOW);
   digitalWrite(rxenPin, HIGH);
+#endif
 
   // Wait for RX done interrupt
   Serial.println("Wait for RX done interrupt");
@@ -165,10 +184,12 @@ uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
 
   // Clear the interrupt status
   uint16_t irqStat;
-  Api.getIrqStatus(&irqStat);
+  sx126x_getIrqStatus(&irqStat);
   Serial.println("Clear IRQ status");
-  Api.clearIrqStatus(irqStat);
+  sx126x_clearIrqStatus(irqStat);
+#ifdef SX126X_USING_TXEN_RXEN
   digitalWrite(rxenPin, LOW);
+#endif
 
   // Exit function if timeout reached
   if (irqStat & SX126X_IRQ_TIMEOUT) return irqStat;
@@ -177,13 +198,13 @@ uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
   // Get last received length and buffer base address
   Serial.println("Get received length and buffer base address");
   uint8_t payloadLengthRx, rxStartBufferPointer;
-  Api.getRxBufferStatus(&payloadLengthRx, &rxStartBufferPointer);
+  sx126x_getRxBufferStatus(&payloadLengthRx, &rxStartBufferPointer);
   uint8_t message[payloadLengthRx];
 
   // Get and display packet status
   Serial.println("Get received packet status");
   uint8_t rssiPkt, snrPkt, signalRssiPkt;
-  Api.getPacketStatus(&rssiPkt, &snrPkt, &signalRssiPkt);
+  sx126x_getPacketStatus(&rssiPkt, &snrPkt, &signalRssiPkt);
   float rssi = rssiPkt / -2;
   float snr = snrPkt / 4;
   float signalRssi = signalRssiPkt / -2;
@@ -196,7 +217,7 @@ uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
 
   // Read message from buffer
   Serial.println("Read message from buffer");
-  Api.readBuffer(rxStartBufferPointer, message, payloadLengthRx);
+  sx126x_readBuffer(rxStartBufferPointer, message, payloadLengthRx);
   len = payloadLengthRx;
   for (uint8_t i=0; i<len; i++){
     msg[i] = (char) message[i];

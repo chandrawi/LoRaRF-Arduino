@@ -1,6 +1,4 @@
-#include <SX126x_API.h>
-
-SX126x_API Api;
+#include <SX126x_driver.h>
 
 // Pin setting
 int8_t nssPin = 10, resetPin = 9, busyPin = 4, irqPin = 2, rxenPin = 7, txenPin = 8;
@@ -13,6 +11,9 @@ int8_t nssPin = 10, resetPin = 9, busyPin = 4, irqPin = 2, rxenPin = 7, txenPin 
 #define SX126X_TCXO
 uint8_t dio3Voltage = SX126X_DIO3_OUTPUT_1_8;
 uint32_t tcxoDelay = SX126X_TCXO_DELAY_10;
+
+// Configure DIO2 as RF switch control or using TXEN and RXEN pin
+#define SX126X_USING_TXEN_RXEN
 
 // RF frequency setting
 uint32_t rfFrequency = 915000000UL;
@@ -81,55 +82,71 @@ void settingFunction() {
 
   // Pin setting
   Serial.println("Setting pins");
-  Api.setPins(nssPin, busyPin);
+  sx126x_setPins(nssPin, busyPin);
+  pinMode(irqPin, INPUT);
 
   // Reset RF module by setting resetPin to LOW and begin SPI communication
   Serial.println("Resetting RF module");
-  Api.reset(resetPin);
-  Api.begin();
+  sx126x_reset(resetPin);
+  sx126x_begin();
+
+  // Set to standby mode
+  sx126x_setStandby(SX126X_STANDBY_RC);
+  if (!sx126x_busyCheck()) {
+    Serial.println("Going to standby mode");
+  } else {
+    Serial.println("Something wrong, can't set to standby mode");
+  }
 
   // Optionally configure TCXO or XTAL used in RF module
 #ifdef SX126X_TCXO
   Serial.println("Set RF module to use TCXO as clock reference");
-  Api.setDio3AsTcxoCtrl(dio3Voltage, tcxoDelay);
+  sx126x_setDio3AsTcxoCtrl(dio3Voltage, tcxoDelay);
 #endif
 #ifdef SX126X_XTAL
   Serial.println("Set RF module to use XTAL as clock reference");
-  Api.writeRegister(SX126X_REG_XTA_TRIM, xtalCap, 2);
+  sx126x_writeRegister(SX126X_REG_XTA_TRIM, xtalCap, 2);
 #endif
 
-  // Set to standby mode and set packet type to LoRa
-  Serial.println("Going to standby mode");
-  Api.setStandby(SX126X_STANDBY_RC);
+  // Optionally configure DIO2 as RF switch control
+#ifdef SX126X_USING_TXEN_RXEN
+  pinMode(txenPin, OUTPUT);
+  pinMode(rxenPin, OUTPUT);
+#else
+  Serial.println("Set RF switch is controlled by DIO2");
+  sx126x_setDio2AsRfSwitchCtrl(SX126X_DIO2_AS_RF_SWITCH);
+#endif
+
+  // Set packet type to LoRa
   Serial.println("Set packet type to LoRa");
-  Api.setPacketType(SX126X_LORA_MODEM);
+  sx126x_setPacketType(SX126X_LORA_MODEM);
 
   // Set frequency to selected frequency (rfFrequency = rfFreq * 32000000 / 2 ^ 25)
   Serial.print("Set frequency to ");
   Serial.print(rfFrequency / 1000000);
   Serial.println(" Mhz");
   uint32_t rfFreq = ((uint64_t) rfFrequency * 33554432UL) / 32000000UL;
-  Api.setRfFrequency(rfFreq);
+  sx126x_setRfFrequency(rfFreq);
 
   // Set tx power to selected TX power
   Serial.print("Set TX power to ");
   Serial.print(power, DEC);
   Serial.println(" dBm");
-  Api.setPaConfig(paDutyCycle, hpMax, deviceSel, 0x01);
-  Api.setTxParams(power, SX126X_PA_RAMP_200U);
+  sx126x_setPaConfig(paDutyCycle, hpMax, deviceSel, 0x01);
+  sx126x_setTxParams(power, SX126X_PA_RAMP_200U);
 
   // Configure modulation parameter with predefined spreading factor, bandwidth, coding rate, and low data rate optimize setting
   Serial.println("Set modulation with predefined parameters");
-  Api.setModulationParamsLoRa(sf, bw, cr, ldro);
+  sx126x_setModulationParamsLoRa(sf, bw, cr, ldro);
 
   // Configure packet parameter with predefined preamble length, header mode type, payload length, crc type, and invert iq option
   Serial.println("Set packet with predefined parameters");
-  Api.setPacketParamsLoRa(preambleLength, headerType, payloadLength, crcType, invertIq);
+  sx126x_setPacketParamsLoRa(preambleLength, headerType, payloadLength, crcType, invertIq);
 
   // Set predefined syncronize word
   Serial.print("Set syncWord to 0x");
   Serial.println((sw[0] << 8) + sw[1], HEX);
-  Api.writeRegister(SX126X_REG_LORA_SYNC_WORD_MSB, sw, 2);
+  sx126x_writeRegister(SX126X_REG_LORA_SYNC_WORD_MSB, sw, 2);
 
 }
 
@@ -139,39 +156,41 @@ uint16_t transmitFunction(char* msg, uint8_t len, uint32_t timeout) {
 
   // Set buffer base address
   Serial.println("Mark a pointer in buffer for transmit message");
-  Api.setBufferBaseAddress(0x00, 0x80);
+  sx126x_setBufferBaseAddress(0x00, 0x80);
 
   // Write the message to buffer
   uint8_t* msgUint8 = (uint8_t*) msg;
   Serial.print("Write message \'");
   Serial.print(msg);
   Serial.println("\' in buffer");
-  Api.writeBuffer(0x00, msgUint8, len);
+  sx126x_writeBuffer(0x00, msgUint8, len);
 
   // Set payload length same as message length
   Serial.print("Set payload length same as message length (");
   Serial.print(len);
   Serial.println(")");
-  Api.setPacketParamsLoRa(preambleLength, headerType, len, crcType, invertIq);
+  sx126x_setPacketParamsLoRa(preambleLength, headerType, len, crcType, invertIq);
 
   // Activate interrupt when transmit done on DIO1
   Serial.println("Set TX done and timeout IRQ on DIO1");
   uint16_t mask = SX126X_IRQ_TX_DONE | SX126X_IRQ_TIMEOUT;
-  Api.setDioIrqParams(mask, mask, SX126X_IRQ_NONE, SX126X_IRQ_NONE);
+  sx126x_setDioIrqParams(mask, mask, SX126X_IRQ_NONE, SX126X_IRQ_NONE);
 
   // Calculate timeout (timeout duration = timeout * 15.625 us)
   uint32_t tOut = timeout * 64;
   // Set RF module to TX mode to transmit message
   Serial.println("Transmitting LoRa packet");
-  Api.setTx(tOut);
+  sx126x_setTx(tOut);
   uint32_t tStart = millis(), tTrans = 0;
 
   // Attach irqPin to DIO1
   Serial.println("Attach interrupt on pin 2 (irqPin)");
   attachInterrupt(digitalPinToInterrupt(irqPin), checkTransmitDone, RISING);
   // Set txen and rxen pin state for transmitting packet
+#ifdef SX126X_USING_TXEN_RXEN
   digitalWrite(txenPin, HIGH);
   digitalWrite(rxenPin, LOW);
+#endif
 
   // Wait for TX done interrupt and calcualte transmit time
   Serial.println("Wait for TX done interrupt");
@@ -188,10 +207,12 @@ uint16_t transmitFunction(char* msg, uint8_t len, uint32_t timeout) {
 
   // Clear the interrupt status
   uint16_t irqStat;
-  Api.getIrqStatus(&irqStat);
+  sx126x_getIrqStatus(&irqStat);
   Serial.println("Clear IRQ status");
-  Api.clearIrqStatus(irqStat);
+  sx126x_clearIrqStatus(irqStat);
+#ifdef SX126X_USING_TXEN_RXEN
   digitalWrite(txenPin, LOW);
+#endif
 
   // return interrupt status
   return irqStat;
