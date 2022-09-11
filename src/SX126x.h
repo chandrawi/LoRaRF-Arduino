@@ -2,7 +2,7 @@
 #define _SX126X_H_
 
 #include <BaseLoRa.h>
-#include <SX126x_API.h>
+#include <SX126x_driver.h>
 
 // Status TX and RX operation
 #define SX126X_STATUS_DEFAULT                   LORA_STATUS_DEFAULT
@@ -95,7 +95,7 @@ class SX126x
             };
             union conv u;
             u.Data = data;
-            SX126x_API::writeBuffer(_bufferIndex, u.Binary, length);
+            sx126x_writeBuffer(_bufferIndex, u.Binary, length);
             _bufferIndex += length;
             _payloadTxRx += length;
         }
@@ -117,7 +117,7 @@ class SX126x
                 uint8_t Binary[length];
             };
             union conv u;
-            SX126x_API::readBuffer(_bufferIndex, u.Binary, length);
+            sx126x_readBuffer(_bufferIndex, u.Binary, length);
             data = u.Data;
             _bufferIndex += length;
             _payloadTxRx = _payloadTxRx > length ? _payloadTxRx - length : 0;
@@ -155,8 +155,7 @@ class SX126x
     private:
 
         SPIClass* _spi;
-        int8_t _nss, _reset, _busy;
-        int8_t _irq, _txen, _rxen;
+        int8_t _nss, _reset, _busy, _irq, _txen, _rxen;
         int8_t _dio;
         uint8_t _statusWait;
         static uint16_t _statusIrq;

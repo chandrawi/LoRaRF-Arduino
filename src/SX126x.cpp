@@ -18,30 +18,28 @@ int8_t SX126x::_pinToLow = -1;
 
 SX126x::SX126x()
 {
+    _spi = &SX126X_SPI;
     _dio = SX126X_PIN_RF_IRQ;
-    setSPI(SX126X_SPI);
     setPins(SX126X_PIN_NSS, SX126X_PIN_RESET, SX126X_PIN_BUSY);
 }
 
 bool SX126x::begin()
 {
     // set pins as input or output
-    pinMode(_nss, OUTPUT);
-    pinMode(_busy, INPUT);
     if (_irq != -1) pinMode(_irq, INPUT);
     if (_txen != -1) pinMode(_txen, OUTPUT);
     if (_rxen != -1) pinMode(_rxen, OUTPUT);
 
     // begin spi and perform device reset
-    _spi->begin();
-    SX126x_API::reset(_reset);
+    sx126x_begin();
+    sx126x_reset(_reset);
 
     // check if device connect and set modem to LoRa
-    SX126x_API::setStandby(SX126X_STANDBY_RC);
+    sx126x_setStandby(SX126X_STANDBY_RC);
     if (getMode() != SX126X_STATUS_MODE_STDBY_RC) return false;
-    SX126x_API::setPacketType(SX126X_LORA_MODEM);
+    sx126x_setPacketType(SX126X_LORA_MODEM);
     
-    SX126x_API::fixResistanceAntenna();
+    sx126x_fixResistanceAntenna();
     return true;
 }
 
@@ -60,15 +58,15 @@ void SX126x::end()
 bool SX126x::reset()
 {
     // put reset pin to low then wait busy pin to low
-    SX126x_API::reset(_reset);
-    return !SX126x_API::busyCheck();
+    sx126x_reset(_reset);
+    return !sx126x_busyCheck();
 }
 
 void SX126x::sleep(uint8_t option)
 {
     // put device in sleep mode, wait for 500 us to enter sleep mode
     standby();
-    SX126x_API::setSleep(option);
+    sx126x_setSleep(option);
     delayMicroseconds(500);
 }
 
@@ -77,48 +75,48 @@ void SX126x::wake()
     // wake device by set nss to low and put device in standby mode
     digitalWrite(_nss, LOW);
     standby();
-    SX126x_API::fixResistanceAntenna();
+    sx126x_fixResistanceAntenna();
 }
 
 void SX126x::standby(uint8_t option)
 {
-    SX126x_API::setStandby(option);
+    sx126x_setStandby(option);
 }
 
 void SX126x::setActive()
 {
-    // override spi, nss, and busy static property in SX126x API with object property
-    SX126x_API::setSPI(*_spi, 0);
-    SX126x_API::setPins(_nss, _busy);
+    // override spi, nss, and busy static property in SX126x driver with object property
+    sx126x_setSPI(*_spi, 0);
+    sx126x_setPins(_nss, _busy);
 }
 
 bool SX126x::busyCheck(uint32_t timeout)
 {
-    return SX126x_API::busyCheck(timeout);
+    return sx126x_busyCheck(timeout);
 }
 
 void SX126x::setFallbackMode(uint8_t fallbackMode)
 {
-    SX126x_API::setRxTxFallbackMode(fallbackMode);
+    sx126x_setRxTxFallbackMode(fallbackMode);
 }
 
 uint8_t SX126x::getMode()
 {
     uint8_t mode;
-    SX126x_API::getStatus(&mode);
+    sx126x_getStatus(&mode);
     return mode & 0x70;
 }
 
 void SX126x::setSPI(SPIClass &SpiObject, uint32_t frequency)
 {
-    SX126x_API::setSPI(SpiObject, frequency);
+    sx126x_setSPI(SpiObject, frequency);
 
     _spi = &SpiObject;
 }
 
 void SX126x::setPins(int8_t nss, int8_t reset, int8_t busy, int8_t irq, int8_t txen, int8_t rxen)
 {
-    SX126x_API::setPins(nss, busy);
+    sx126x_setPins(nss, busy);
 
     _nss = nss;
     _reset = reset;
@@ -137,42 +135,42 @@ void SX126x::setRfIrqPin(int8_t dioPinSelect)
 
 void SX126x::setDio2RfSwitch(bool enable)
 {
-    if (enable) SX126x_API::setDio2AsRfSwitchCtrl(SX126X_DIO2_AS_RF_SWITCH);
-    else SX126x_API::setDio2AsRfSwitchCtrl(SX126X_DIO2_AS_IRQ);
+    if (enable) sx126x_setDio2AsRfSwitchCtrl(SX126X_DIO2_AS_RF_SWITCH);
+    else sx126x_setDio2AsRfSwitchCtrl(SX126X_DIO2_AS_IRQ);
 }
 
 void SX126x::setDio3TcxoCtrl(uint8_t tcxoVoltage, uint32_t delayTime)
 {
-    SX126x_API::setDio3AsTcxoCtrl(tcxoVoltage, delayTime);
-    SX126x_API::setStandby(SX126X_STANDBY_RC);
-    SX126x_API::calibrate(0xFF);
+    sx126x_setDio3AsTcxoCtrl(tcxoVoltage, delayTime);
+    sx126x_setStandby(SX126X_STANDBY_RC);
+    sx126x_calibrate(0xFF);
 }
 
 void SX126x::setXtalCap(uint8_t xtalA, uint8_t xtalB)
 {
-    SX126x_API::setStandby(SX126X_STANDBY_XOSC);
+    sx126x_setStandby(SX126X_STANDBY_XOSC);
     uint8_t buf[2] = {xtalA, xtalB};
-    SX126x_API::writeRegister(SX126X_REG_XTA_TRIM, buf, 2);
-    SX126x_API::setStandby(SX126X_STANDBY_RC);
-    SX126x_API::calibrate(0xFF);
+    sx126x_writeRegister(SX126X_REG_XTA_TRIM, buf, 2);
+    sx126x_setStandby(SX126X_STANDBY_RC);
+    sx126x_calibrate(0xFF);
 }
 
 void SX126x::setRegulator(uint8_t regMode)
 {
-    SX126x_API::setRegulatorMode(regMode);
+    sx126x_setRegulatorMode(regMode);
 }
 
 void SX126x::setCurrentProtection(uint8_t current)
 {
     uint8_t currentmA = current * 2 / 5;
-    SX126x_API::writeRegister(SX126X_REG_OCP_CONFIGURATION, &currentmA, 1);
+    sx126x_writeRegister(SX126X_REG_OCP_CONFIGURATION, &currentmA, 1);
 }
 
 void SX126x::setModem(uint8_t modem)
 {
     _modem = modem;
-    SX126x_API::setStandby(SX126X_STANDBY_RC);
-    SX126x_API::setPacketType(modem);
+    sx126x_setStandby(SX126X_STANDBY_RC);
+    sx126x_setPacketType(modem);
 }
 
 void SX126x::setFrequency(uint32_t frequency)
@@ -202,8 +200,8 @@ void SX126x::setFrequency(uint32_t frequency)
     uint32_t rfFreq = ((uint64_t) frequency << SX126X_RF_FREQUENCY_SHIFT) / SX126X_RF_FREQUENCY_XTAL;
 
     // perform image calibration before set frequency
-    SX126x_API::calibrateImage(calFreq[0], calFreq[1]);
-    SX126x_API::setRfFrequency(rfFreq);
+    sx126x_calibrateImage(calFreq[0], calFreq[1]);
+    sx126x_setRfFrequency(rfFreq);
 }
 
 void SX126x::setTxPower(uint8_t txPower, uint8_t version)
@@ -254,19 +252,19 @@ void SX126x::setTxPower(uint8_t txPower, uint8_t version)
     }
 
     // set power amplifier and TX power configuration
-    SX126x_API::setPaConfig(paDutyCycle, hpMax, deviceSel, 0x01);
-    SX126x_API::setTxParams(power, SX126X_PA_RAMP_800U);
+    sx126x_setPaConfig(paDutyCycle, hpMax, deviceSel, 0x01);
+    sx126x_setTxParams(power, SX126X_PA_RAMP_800U);
 }
 
 void SX126x::setRxGain(uint8_t boost)
 {
     // set power saving or boosted gain in register
     uint8_t gain = boost ? SX126X_BOOSTED_GAIN : SX126X_POWER_SAVING_GAIN;
-    SX126x_API::writeRegister(SX126X_REG_RX_GAIN, &gain, 1);
+    sx126x_writeRegister(SX126X_REG_RX_GAIN, &gain, 1);
     if (boost){
         // set certain register to retain configuration after wake from sleep mode
         uint8_t buf[3] = {0x01, 0x08, 0xAC};
-        SX126x_API::writeRegister(0x029F, buf, 3);
+        sx126x_writeRegister(0x029F, buf, 3);
     }
 }
 
@@ -295,7 +293,7 @@ void SX126x::setLoRaModulation(uint8_t sf, uint32_t bw, uint8_t cr, bool ldro)
     cr -= 4;
     if (cr > 4) cr = 0;
 
-    SX126x_API::setModulationParamsLoRa(sf, (uint8_t) bw, cr, (uint8_t) ldro);
+    sx126x_setModulationParamsLoRa(sf, (uint8_t) bw, cr, (uint8_t) ldro);
 }
 
 void SX126x::setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t payloadLength, bool crcType, bool invertIq)
@@ -309,8 +307,8 @@ void SX126x::setLoRaPacket(uint8_t headerType, uint16_t preambleLength, uint8_t 
     // filter valid header type config
     if (headerType != SX126X_HEADER_IMPLICIT) headerType = SX126X_HEADER_EXPLICIT;
 
-    SX126x_API::setPacketParamsLoRa(preambleLength, headerType, payloadLength, (uint8_t) crcType, (uint8_t) invertIq);
-    SX126x_API::fixInvertedIq((uint8_t) invertIq);
+    sx126x_setPacketParamsLoRa(preambleLength, headerType, payloadLength, (uint8_t) crcType, (uint8_t) invertIq);
+    sx126x_fixInvertedIq((uint8_t) invertIq);
 }
 
 void SX126x::setSpreadingFactor(uint8_t sf)
@@ -367,28 +365,28 @@ void SX126x::setSyncWord(uint16_t syncWord)
         buf[0] = (syncWord & 0xF0) | 0x04;
         buf[1] = (syncWord << 4) | 0x04;
     }
-    SX126x_API::writeRegister(SX126X_REG_LORA_SYNC_WORD_MSB, buf, 2);
+    sx126x_writeRegister(SX126X_REG_LORA_SYNC_WORD_MSB, buf, 2);
 }
 
 void SX126x::setFskModulation(uint32_t br, uint8_t pulseShape, uint8_t bandwidth, uint32_t Fdev)
 {
-    SX126x_API::setModulationParamsFSK(br, pulseShape, bandwidth, Fdev);
+    sx126x_setModulationParamsFSK(br, pulseShape, bandwidth, Fdev);
 }
 
 void SX126x::setFskPacket(uint16_t preambleLength, uint8_t preambleDetector, uint8_t syncWordLength, uint8_t addrComp, uint8_t packetType, uint8_t payloadLength, uint8_t crcType, uint8_t whitening)
 {
-    SX126x_API::setPacketParamsFSK(preambleLength, preambleDetector, syncWordLength, addrComp, packetType, payloadLength, crcType, whitening);
+    sx126x_setPacketParamsFSK(preambleLength, preambleDetector, syncWordLength, addrComp, packetType, payloadLength, crcType, whitening);
 }
 
 void SX126x::setFskSyncWord(uint8_t* sw, uint8_t swLen)
 {
-    SX126x_API::writeRegister(SX126X_REG_FSK_SYNC_WORD_0, sw, swLen);
+    sx126x_writeRegister(SX126X_REG_FSK_SYNC_WORD_0, sw, swLen);
 }
 
 void SX126x::setFskAdress(uint8_t nodeAddr, uint8_t broadcastAddr)
 {
     uint8_t buf[2] = {nodeAddr, broadcastAddr};
-    SX126x_API::writeRegister(SX126X_REG_FSK_NODE_ADDRESS, buf, 2);
+    sx126x_writeRegister(SX126X_REG_FSK_NODE_ADDRESS, buf, 2);
 }
 
 void SX126x::setFskCrc(uint16_t crcInit, uint16_t crcPolynom)
@@ -398,7 +396,7 @@ void SX126x::setFskCrc(uint16_t crcInit, uint16_t crcPolynom)
     buf[1] = crcInit & 0xFF;
     buf[2] = crcPolynom >> 8;
     buf[3] = crcPolynom & 0xFF;
-    SX126x_API::writeRegister(SX126X_REG_FSK_CRC_INITIAL_MSB, buf, 4);
+    sx126x_writeRegister(SX126X_REG_FSK_CRC_INITIAL_MSB, buf, 4);
 }
 
 void SX126x::setFskWhitening(uint16_t whitening)
@@ -406,14 +404,14 @@ void SX126x::setFskWhitening(uint16_t whitening)
     uint8_t buf[2];
     buf[0] = whitening >> 8;
     buf[1] = whitening & 0xFF;
-    SX126x_API::writeRegister(SX126X_REG_FSK_WHITENING_INITIAL_MSB, buf, 2);
+    sx126x_writeRegister(SX126X_REG_FSK_WHITENING_INITIAL_MSB, buf, 2);
 }
 
 void SX126x::beginPacket()
 {
     // reset payload length and buffer index
     _payloadTxRx = 0;
-    SX126x_API::setBufferBaseAddress(_bufferIndex, _bufferIndex + 0xFF);
+    sx126x_setBufferBaseAddress(_bufferIndex, _bufferIndex + 0xFF);
 
     // set txen pin to low and rxen pin to high
     if ((_rxen != -1) && (_txen != -1)) {
@@ -422,7 +420,7 @@ void SX126x::beginPacket()
         _pinToLow = _txen;
     }
     
-    SX126x_API::fixLoRaBw500(_bw);
+    sx126x_fixLoRaBw500(_bw);
 }
 
 bool SX126x::endPacket(uint32_t timeout)
@@ -444,7 +442,7 @@ bool SX126x::endPacket(uint32_t timeout)
     if (txTimeout > 0x00FFFFFF) txTimeout = SX126X_TX_SINGLE;
 
     // set device to transmit mode with configured timeout or single operation
-    SX126x_API::setTx(txTimeout);
+    sx126x_setTx(txTimeout);
     _transmitTime = millis();
 
     // set operation status to wait and attach TX interrupt handler
@@ -457,7 +455,7 @@ bool SX126x::endPacket(uint32_t timeout)
 void SX126x::write(uint8_t data)
 {
     // write single byte of package to be transmitted
-    SX126x_API::writeBuffer(_bufferIndex, &data, 1);
+    sx126x_writeBuffer(_bufferIndex, &data, 1);
     _bufferIndex++;
     _payloadTxRx++;
 }
@@ -465,7 +463,7 @@ void SX126x::write(uint8_t data)
 void SX126x::write(uint8_t* data, uint8_t length)
 {
     // write multiple bytes of package to be transmitted
-    SX126x_API::writeBuffer(_bufferIndex, data, length);
+    sx126x_writeBuffer(_bufferIndex, data, length);
     _bufferIndex += length;
     _payloadTxRx += length;
 }
@@ -474,7 +472,7 @@ void SX126x::write(char* data, uint8_t length)
 {
     // write multiple bytes of package to be transmitted for char type
     uint8_t* data_ = (uint8_t*) data;
-    SX126x_API::writeBuffer(_bufferIndex, data_, length);
+    sx126x_writeBuffer(_bufferIndex, data_, length);
     _bufferIndex += length;
     _payloadTxRx += length;
 }
@@ -506,7 +504,7 @@ bool SX126x::request(uint32_t timeout)
     }
 
     // set device to receive mode with configured timeout, single, or continuous operation
-    SX126x_API::setRx(rxTimeout);
+    sx126x_setRx(rxTimeout);
 
     // set operation status to wait and attach RX interrupt handler
     if (_irq != -1) {
@@ -544,7 +542,7 @@ bool SX126x::listen(uint32_t rxPeriod, uint32_t sleepPeriod)
     }
 
     // set device to receive mode with configured receive and sleep period
-    SX126x_API::setRxDutyCycle(rxPeriod, sleepPeriod);
+    sx126x_setRxDutyCycle(rxPeriod, sleepPeriod);
 
     // set operation status to wait and attach RX interrupt handler
     if (_irq != -1) {
@@ -563,7 +561,7 @@ uint8_t SX126x::read()
 {
     // read single byte of received package
     uint8_t buf;
-    SX126x_API::readBuffer(_bufferIndex, &buf, 1);
+    sx126x_readBuffer(_bufferIndex, &buf, 1);
     _bufferIndex++;
     if (_payloadTxRx > 0) _payloadTxRx--;
     return buf;
@@ -572,7 +570,7 @@ uint8_t SX126x::read()
 uint8_t SX126x::read(uint8_t* data, uint8_t length)
 {
     // read multiple bytes of received package
-    SX126x_API::readBuffer(_bufferIndex, data, length);
+    sx126x_readBuffer(_bufferIndex, data, length);
     // return smallest between read length and size of package available
     _bufferIndex += length;
     _payloadTxRx = _payloadTxRx > length ? _payloadTxRx - length : 0;
@@ -583,7 +581,7 @@ uint8_t SX126x::read(char* data, uint8_t length)
 {
     // read multiple bytes of received package for char type
     uint8_t* data_ = (uint8_t*) data;
-    SX126x_API::readBuffer(_bufferIndex, data_, length);
+    sx126x_readBuffer(_bufferIndex, data_, length);
     _bufferIndex += length;
     _payloadTxRx = _payloadTxRx > length ? _payloadTxRx - length : 0;
     return _payloadTxRx > length ? length : _payloadTxRx;
@@ -606,7 +604,7 @@ bool SX126x::wait(uint32_t timeout)
     uint32_t t = millis();
     while (irqStat == 0x0000 && _statusIrq == 0x0000) {
         // only check IRQ status register for non interrupt operation
-        if (_irq == -1) SX126x_API::getIrqStatus(&irqStat);
+        if (_irq == -1) sx126x_getIrqStatus(&irqStat);
         // return when timeout reached
         if (millis() - t > timeout && timeout != 0) return false;
         yield();
@@ -621,13 +619,13 @@ bool SX126x::wait(uint32_t timeout)
         if (_txen != -1) digitalWrite(_txen, LOW);
     } else if (_statusWait == SX126X_STATUS_RX_WAIT) {
         // for receive, get received payload length and buffer index and set back rxen pin to low
-        SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
+        sx126x_getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
         if (_rxen != -1) digitalWrite(_rxen, LOW);
-        SX126x_API::fixRxTimeout();
+        sx126x_fixRxTimeout();
     } else if (_statusWait == SX126X_STATUS_RX_CONTINUOUS) {
         // for receive continuous, get received payload length and buffer index and clear IRQ status
-        SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
-        SX126x_API::clearIrqStatus(0x03FF);
+        sx126x_getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
+        sx126x_clearIrqStatus(0x03FF);
     }
 
     // store IRQ status
@@ -673,7 +671,7 @@ int16_t SX126x::packetRssi()
 {
     // get relative signal strength index (RSSI) of last incoming package
     uint8_t rssiPkt, snrPkt, signalRssiPkt;
-    SX126x_API::getPacketStatus(&rssiPkt, &snrPkt, &signalRssiPkt);
+    sx126x_getPacketStatus(&rssiPkt, &snrPkt, &signalRssiPkt);
     return (rssiPkt / -2);
 }
 
@@ -681,29 +679,29 @@ float SX126x::snr()
 {
     // get signal to noise ratio (SNR) of last incoming package
     uint8_t rssiPkt, snrPkt, signalRssiPkt;
-    SX126x_API::getPacketStatus(&rssiPkt, &snrPkt, &signalRssiPkt);
+    sx126x_getPacketStatus(&rssiPkt, &snrPkt, &signalRssiPkt);
     return ((int8_t) snrPkt / 4.0);
 }
 
 int16_t SX126x::signalRssi()
 {
     uint8_t rssiPkt, snrPkt, signalRssiPkt;
-    SX126x_API::getPacketStatus(&rssiPkt, &snrPkt, &signalRssiPkt);
+    sx126x_getPacketStatus(&rssiPkt, &snrPkt, &signalRssiPkt);
     return (signalRssiPkt / -2);
 }
 
 int16_t SX126x::rssiInst()
 {
     uint8_t rssiInst;
-    SX126x_API::getRssiInst(&rssiInst);
+    sx126x_getRssiInst(&rssiInst);
     return (rssiInst / -2);
 }
 
 uint16_t SX126x::getError()
 {
     uint16_t error;
-    SX126x_API::getDeviceErrors(&error);
-    SX126x_API::clearDeviceErrors();
+    sx126x_getDeviceErrors(&error);
+    sx126x_clearDeviceErrors();
     return error;
 }
 
@@ -711,7 +709,7 @@ uint32_t SX126x::random()
 {
     // generate random number from register and previous random number
     uint8_t buf[4];
-    SX126x_API::readRegister(SX126X_REG_RANDOM_NUMBER_GEN, buf, 4);
+    sx126x_readRegister(SX126X_REG_RANDOM_NUMBER_GEN, buf, 4);
     uint32_t number = ((uint32_t) buf[0] << 24) | ((uint32_t) buf[1] << 16) | ((uint32_t) buf[2] << 8) | ((uint32_t) buf[0]);
     uint32_t n = _random;
     number = number ^ ((~n << 16) | n);
@@ -725,7 +723,7 @@ uint32_t SX126x::random()
 void SX126x::_irqSetup(uint16_t irqMask)
 {
     // clear IRQ status of previous transmit or receive operation
-    SX126x_API::clearIrqStatus(0x03FF);
+    sx126x_clearIrqStatus(0x03FF);
 
     // set selected interrupt source
     uint16_t dio1Mask = 0x0000;
@@ -734,7 +732,7 @@ void SX126x::_irqSetup(uint16_t irqMask)
     if (_dio == 2) dio2Mask = irqMask;
     else if (_dio == 3) dio3Mask = irqMask;
     else dio1Mask = irqMask;
-    SX126x_API::setDioIrqParams(irqMask, dio1Mask, dio2Mask, dio3Mask);
+    sx126x_setDioIrqParams(irqMask, dio1Mask, dio2Mask, dio3Mask);
 }
 
 void SX126x::_interruptTx()
@@ -747,7 +745,7 @@ void SX126x::_interruptTx()
     detachInterrupt(_irqStatic);
 
     // store IRQ status
-    SX126x_API::getIrqStatus(&_statusIrq);
+    sx126x_getIrqStatus(&_statusIrq);
 
     // call onTransmit function
     if (_onTransmit) {
@@ -760,13 +758,13 @@ void SX126x::_interruptRx()
     // set back rxen pin to low and detach interrupt
     if (_pinToLow != -1) digitalWrite(_pinToLow, LOW);
     detachInterrupt(_irqStatic);
-    SX126x_API::fixRxTimeout();
+    sx126x_fixRxTimeout();
 
     // store IRQ status
-    SX126x_API::getIrqStatus(&_statusIrq);
+    sx126x_getIrqStatus(&_statusIrq);
 
     // get received payload length and buffer index
-    SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
+    sx126x_getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
 
     // call onReceive function
     if (_onReceive) {
@@ -777,13 +775,13 @@ void SX126x::_interruptRx()
 void SX126x::_interruptRxContinuous()
 {
     // store IRQ status
-    SX126x_API::getIrqStatus(&_statusIrq);
+    sx126x_getIrqStatus(&_statusIrq);
 
     // clear IRQ status
-    SX126x_API::clearIrqStatus(0x03FF);
+    sx126x_clearIrqStatus(0x03FF);
 
     // get received payload length and buffer index
-    SX126x_API::getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
+    sx126x_getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
 
     // call onReceive function
     if (_onReceive) {
