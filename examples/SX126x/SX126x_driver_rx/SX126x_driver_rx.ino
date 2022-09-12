@@ -39,41 +39,6 @@ uint8_t sw[2] = {0x34, 0x44};
 
 volatile bool received = false;
 
-void setup() {
-
-  // Begin serial communication
-  Serial.begin(38400);
-
-  // Seetings for LoRa communication
-  settingFunction();
-
-}
-
-void loop() {
-
-  // Receive message
-  char message[20];
-  uint8_t msgLen;
-  uint32_t timeout = 5000; // 5000 ms timeout
-  uint16_t status = receiveFunction(message, msgLen, timeout);
-
-  // Display message if receive success or display status if error
-  if (status & SX126X_IRQ_RX_DONE){
-    Serial.print("Message: \'");
-    for (uint8_t i=0; i< msgLen; i++){
-      Serial.print(message[i]);
-    }
-    Serial.println("\'");
-  }
-  else if (status & SX126X_IRQ_TIMEOUT){
-    Serial.println("Receive timeout");
-  }
-  else if(status & SX126X_IRQ_CRC_ERR){
-    Serial.println("CRC error");
-  }
-
-}
-
 void checkReceiveDone() {
   received = true;
 }
@@ -148,7 +113,6 @@ void settingFunction() {
   Serial.print("Set syncWord to 0x");
   Serial.println((sw[0] << 8) + sw[1], HEX);
   sx126x_writeRegister(SX126X_REG_LORA_SYNC_WORD_MSB, sw, 2);
-
 }
 
 uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
@@ -159,6 +123,14 @@ uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
   Serial.println("Set RX done, timeout, and CRC error IRQ on DIO1");
   uint16_t mask = SX126X_IRQ_RX_DONE | SX126X_IRQ_TIMEOUT | SX126X_IRQ_CRC_ERR;
   sx126x_setDioIrqParams(mask, mask, SX126X_IRQ_NONE, SX126X_IRQ_NONE);
+  // Attach irqPin to DIO1
+  Serial.println("Attach interrupt on IRQ pin");
+  attachInterrupt(digitalPinToInterrupt(irqPin), checkReceiveDone, RISING);
+  // Set txen and rxen pin state for receiving packet
+#ifdef SX126X_USING_TXEN_RXEN
+  digitalWrite(txenPin, LOW);
+  digitalWrite(rxenPin, HIGH);
+#endif
 
   // Calculate timeout (timeout duration = timeout * 15.625 us)
   uint32_t tOut = timeout * 64;
@@ -166,15 +138,6 @@ uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
   // Set RF module to RX mode to receive message
   Serial.println("Receiving LoRa packet within predefined timeout");
   sx126x_setRx(tOut);
-
-  // Attach irqPin to DIO1
-  Serial.println("Attach interrupt on pin 2 (irqPin)");
-  attachInterrupt(digitalPinToInterrupt(irqPin), checkReceiveDone, RISING);
-  // Set txen and rxen pin state for receiving packet
-#ifdef SX126X_USING_TXEN_RXEN
-  digitalWrite(txenPin, LOW);
-  digitalWrite(rxenPin, HIGH);
-#endif
 
   // Wait for RX done interrupt
   Serial.println("Wait for RX done interrupt");
@@ -217,13 +180,49 @@ uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
 
   // Read message from buffer
   Serial.println("Read message from buffer");
+  Serial.print("Message in bytes : [ ");
   sx126x_readBuffer(rxStartBufferPointer, message, payloadLengthRx);
   len = payloadLengthRx;
   for (uint8_t i=0; i<len; i++){
     msg[i] = (char) message[i];
+    Serial.print((uint8_t) message[i]);
+    Serial.print("  ");
   }
+  Serial.println("]");
 
   // return interrupt status
   return irqStat;
+}
 
+void setup() {
+
+  // Begin serial communication
+  Serial.begin(38400);
+
+  // Seetings for LoRa communication
+  settingFunction();
+}
+
+void loop() {
+
+  // Receive message
+  char message[13];
+  uint8_t length;
+  uint32_t timeout = 5000; // 5000 ms timeout
+  uint16_t status = receiveFunction(message, length, timeout);
+
+  // Display message if receive success or display status if error
+  if (status & SX126X_IRQ_RX_DONE){
+    Serial.print("Message: \'");
+    for (uint8_t i=0; i< length; i++){
+      Serial.print(message[i]);
+    }
+    Serial.println("\'");
+  }
+  else if (status & SX126X_IRQ_TIMEOUT){
+    Serial.println("Receive timeout");
+  }
+  else if(status & SX126X_IRQ_CRC_ERR){
+    Serial.println("CRC error");
+  }
 }

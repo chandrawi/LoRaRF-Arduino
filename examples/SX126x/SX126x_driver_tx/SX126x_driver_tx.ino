@@ -42,36 +42,6 @@ uint8_t sw[2] = {0x34, 0x44};
 
 volatile bool transmitted = false;
 
-void setup() {
-
-  // Begin serial communication
-  Serial.begin(38400);
-
-  // Seetings for LoRa communication
-  settingFunction();
-
-}
-
-void loop() {
-
-  // Message to transmit
-  char message[] = "HeLoRa World";
-  uint8_t nBytes = sizeof(message);
-
-  // Transmit message
-  uint32_t timeout = 1000; // 1000 ms timeout
-  uint16_t status = transmitFunction(message, nBytes, timeout);
-
-  // Display status if error
-  if (status & SX126X_IRQ_TIMEOUT){
-    Serial.println("Transmit timeout");
-  }
-
-  // Don't load RF module with continous transmit
-  delay(10000);
-
-}
-
 void checkTransmitDone() {
   transmitted = true;
 }
@@ -147,10 +117,9 @@ void settingFunction() {
   Serial.print("Set syncWord to 0x");
   Serial.println((sw[0] << 8) + sw[1], HEX);
   sx126x_writeRegister(SX126X_REG_LORA_SYNC_WORD_MSB, sw, 2);
-
 }
 
-uint16_t transmitFunction(char* msg, uint8_t len, uint32_t timeout) {
+uint16_t transmitFunction(char* message, uint8_t length, uint32_t timeout) {
 
   Serial.println("\n-- TRANSMIT FUNCTION --");
 
@@ -159,22 +128,36 @@ uint16_t transmitFunction(char* msg, uint8_t len, uint32_t timeout) {
   sx126x_setBufferBaseAddress(0x00, 0x80);
 
   // Write the message to buffer
-  uint8_t* msgUint8 = (uint8_t*) msg;
+  uint8_t* msgUint8 = (uint8_t*) message;
   Serial.print("Write message \'");
-  Serial.print(msg);
+  Serial.print(message);
   Serial.println("\' in buffer");
-  sx126x_writeBuffer(0x00, msgUint8, len);
+  Serial.print("Message in bytes : [ ");
+  sx126x_writeBuffer(0x00, msgUint8, length);
+  for (uint8_t i = 0; i < length; i++) {
+    Serial.print((uint8_t) message[i]);
+    Serial.print("  ");
+  }
+  Serial.println("]");
 
   // Set payload length same as message length
   Serial.print("Set payload length same as message length (");
-  Serial.print(len);
+  Serial.print(length);
   Serial.println(")");
-  sx126x_setPacketParamsLoRa(preambleLength, headerType, len, crcType, invertIq);
+  sx126x_setPacketParamsLoRa(preambleLength, headerType, length, crcType, invertIq);
 
   // Activate interrupt when transmit done on DIO1
   Serial.println("Set TX done and timeout IRQ on DIO1");
   uint16_t mask = SX126X_IRQ_TX_DONE | SX126X_IRQ_TIMEOUT;
   sx126x_setDioIrqParams(mask, mask, SX126X_IRQ_NONE, SX126X_IRQ_NONE);
+  // Attach irqPin to DIO1
+  Serial.println("Attach interrupt on IRQ pin");
+  attachInterrupt(digitalPinToInterrupt(irqPin), checkTransmitDone, RISING);
+  // Set txen and rxen pin state for transmitting packet
+#ifdef SX126X_USING_TXEN_RXEN
+  digitalWrite(txenPin, HIGH);
+  digitalWrite(rxenPin, LOW);
+#endif
 
   // Calculate timeout (timeout duration = timeout * 15.625 us)
   uint32_t tOut = timeout * 64;
@@ -182,15 +165,6 @@ uint16_t transmitFunction(char* msg, uint8_t len, uint32_t timeout) {
   Serial.println("Transmitting LoRa packet");
   sx126x_setTx(tOut);
   uint32_t tStart = millis(), tTrans = 0;
-
-  // Attach irqPin to DIO1
-  Serial.println("Attach interrupt on pin 2 (irqPin)");
-  attachInterrupt(digitalPinToInterrupt(irqPin), checkTransmitDone, RISING);
-  // Set txen and rxen pin state for transmitting packet
-#ifdef SX126X_USING_TXEN_RXEN
-  digitalWrite(txenPin, HIGH);
-  digitalWrite(rxenPin, LOW);
-#endif
 
   // Wait for TX done interrupt and calcualte transmit time
   Serial.println("Wait for TX done interrupt");
@@ -216,5 +190,32 @@ uint16_t transmitFunction(char* msg, uint8_t len, uint32_t timeout) {
 
   // return interrupt status
   return irqStat;
+}
 
+void setup() {
+
+  // Begin serial communication
+  Serial.begin(38400);
+
+  // Seetings for LoRa communication
+  settingFunction();
+}
+
+void loop() {
+
+  // Message to transmit
+  char message[] = "HeLoRa World";
+  uint8_t nBytes = sizeof(message);
+
+  // Transmit message
+  uint32_t timeout = 1000; // 1000 ms timeout
+  uint16_t status = transmitFunction(message, nBytes, timeout);
+
+  // Display status if error
+  if (status & SX126X_IRQ_TIMEOUT){
+    Serial.println("Transmit timeout");
+  }
+
+  // Don't load RF module with continous transmit
+  delay(10000);
 }
