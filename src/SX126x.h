@@ -158,7 +158,7 @@ class SX126x
         int8_t _nss, _reset, _busy, _irq, _txen, _rxen;
         int8_t _dio;
         uint8_t _statusWait;
-        static uint16_t _statusIrq;
+        volatile static uint16_t _statusIrq;
         static uint32_t _transmitTime;
         static uint8_t _bufferIndex;
         static uint8_t _payloadTxRx;

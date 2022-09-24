@@ -20,7 +20,7 @@ void setup() {
   LoRa.setFrequency(915E6);
 
   // Set RX gain to boosted gain
-  Serial.println("Set RX gain to power saving gain");
+  Serial.println("Set RX gain to boosted gain");
   LoRa.setRxGain(SX127X_RX_GAIN_BOOSTED);
 
   // Configure modulation parameter including spreading factor (SF), bandwidth (BW), and coding rate (CR)

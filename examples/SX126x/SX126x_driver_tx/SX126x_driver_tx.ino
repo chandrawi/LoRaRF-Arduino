@@ -197,7 +197,7 @@ void setup() {
   // Begin serial communication
   Serial.begin(38400);
 
-  // Seetings for LoRa communication
+  // Settings for LoRa communication
   settingFunction();
 }
 

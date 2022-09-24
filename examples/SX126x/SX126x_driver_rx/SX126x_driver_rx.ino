@@ -115,7 +115,7 @@ void settingFunction() {
   sx126x_writeRegister(SX126X_REG_LORA_SYNC_WORD_MSB, sw, 2);
 }
 
-uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
+uint16_t receiveFunction(char* message, uint8_t &len, uint32_t timeout) {
 
   Serial.println("\n-- RECEIVE FUNCTION --");
 
@@ -162,7 +162,7 @@ uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
   Serial.println("Get received length and buffer base address");
   uint8_t payloadLengthRx, rxStartBufferPointer;
   sx126x_getRxBufferStatus(&payloadLengthRx, &rxStartBufferPointer);
-  uint8_t message[payloadLengthRx];
+  uint8_t msgUint8[payloadLengthRx];
 
   // Get and display packet status
   Serial.println("Get received packet status");
@@ -181,11 +181,11 @@ uint16_t receiveFunction(char* msg, uint8_t &len, uint32_t timeout) {
   // Read message from buffer
   Serial.println("Read message from buffer");
   Serial.print("Message in bytes : [ ");
-  sx126x_readBuffer(rxStartBufferPointer, message, payloadLengthRx);
+  sx126x_readBuffer(rxStartBufferPointer, msgUint8, payloadLengthRx);
   len = payloadLengthRx;
   for (uint8_t i=0; i<len; i++){
-    msg[i] = (char) message[i];
-    Serial.print((uint8_t) message[i]);
+    message[i] = (char) msgUint8[i];
+    Serial.print(msgUint8[i]);
     Serial.print("  ");
   }
   Serial.println("]");
@@ -199,7 +199,7 @@ void setup() {
   // Begin serial communication
   Serial.begin(38400);
 
-  // Seetings for LoRa communication
+  // Settings for LoRa communication
   settingFunction();
 }
 

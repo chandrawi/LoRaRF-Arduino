@@ -129,7 +129,7 @@ class SX127x
         SPIClass* _spi;
         int8_t _nss, _reset, _irq, _txen, _rxen;
         uint8_t _statusWait;
-        static uint8_t _statusIrq;
+        volatile static uint8_t _statusIrq;
         static uint32_t _transmitTime;
         static uint8_t _payloadTxRx;
         static int8_t _irqStatic;

@@ -4,7 +4,7 @@ void (*SX127x::_onTransmit)();
 
 void (*SX127x::_onReceive)();
 
-uint8_t SX127x::_statusIrq = 0xFF;
+volatile uint8_t SX127x::_statusIrq = 0xFF;
 
 uint32_t SX127x::_transmitTime = 0;
 
@@ -248,7 +248,7 @@ void SX127x::setBandwidth(uint32_t bw)
 void SX127x::setCodeRate(uint8_t cr)
 {
     // valid code rate denominator is 5 - 8
-    if (cr < 5) cr = 6;
+    if (cr < 5) cr = 4;
     else if (cr > 8) cr = 8;
     uint8_t crCfg = cr - 4;
     sx127x_writeBits(SX127X_REG_MODEM_CONFIG_1, crCfg, 1, 3);
@@ -297,6 +297,7 @@ void SX127x::setInvertIq(bool invertIq)
 void SX127x::setSyncWord(uint16_t syncWord)
 {
     uint8_t sw = syncWord;
+    // keep compatibility between 1 and 2 bytes synchronize word
     if (syncWord > 0xFF) {
         sw = ((syncWord >> 8) & 0xF0) | (syncWord & 0x0F);
     }

@@ -29,8 +29,8 @@ void setup() {
   Serial.println("Set frequency to 915 Mhz");
   LoRa.setFrequency(915E6);
 
-  // Set RX gain. RX gain option are power saving gain or boosted gain 
-  Serial.println("Set RX gain to power saving gain");
+  // Set TX power, this function will set PA config with optimal setting for requested TX power
+  Serial.println("Set TX power to +17 dBm");
   LoRa.setTxPower(17, SX127X_TX_POWER_PA_BOOST);                    // TX power +17 dBm using PA boost pin
 
   // Configure modulation parameter including spreading factor (SF), bandwidth (BW), and coding rate (CR)

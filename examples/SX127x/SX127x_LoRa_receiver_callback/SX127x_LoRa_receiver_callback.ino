@@ -2,10 +2,10 @@
 
 SX127x LoRa;
 
-// receive data length and pointer
-const uint8_t packetLength = 15;
-uint8_t packetData[packetLength];
-volatile bool flag = false;
+// receive data container and length
+const uint8_t maxLength = 15;
+volatile uint8_t packetLength = 0;
+uint8_t packetData[maxLength];
 
 void setup() {
 
@@ -25,7 +25,7 @@ void setup() {
   LoRa.setFrequency(915E6);
 
   // Set RX gain to boosted gain
-  Serial.println("Set RX gain to power saving gain");
+  Serial.println("Set RX gain to boosted gain");
   LoRa.setRxGain(SX127X_RX_GAIN_BOOSTED);
 
   // Configure modulation parameter including spreading factor (SF), bandwidth (BW), and coding rate (CR)
@@ -56,7 +56,7 @@ void setup() {
 
 void loop() {
 
-  if (flag) {
+  if (packetLength) {
     // Print received package
     Serial.write(packetData, packetLength - 1);
     Serial.print("  ");
@@ -70,17 +70,18 @@ void loop() {
     Serial.println(" dB");
     Serial.println();
 
-    // Reset flag
-    flag = false;
+    // Reset receive data container length
+    packetLength = 0;
   }
 }
 
 void getReceiveData() {
 
-  // set flag
-  flag = true;
-  // Store received data
-  for (uint8_t i=0; i<packetLength; i++) {
-    packetData[i] = LoRa.read();
+  // set received length
+  packetLength = LoRa.available();
+  if (packetLength > maxLength) {
+    packetLength = maxLength;
   }
+  // Store received data
+  LoRa.read(packetData, packetLength);
 }

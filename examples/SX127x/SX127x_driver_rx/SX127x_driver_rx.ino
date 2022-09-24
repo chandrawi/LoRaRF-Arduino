@@ -1,7 +1,7 @@
 #include <SX127x_driver.h>
 
 // Pin setting
-int8_t nssPin = 10, resetPin = 9, irqPin = 2, rxenPin = 7, txenPin = 8;
+int8_t nssPin = 10, resetPin = 9, irqPin = 2, rxenPin = -1, txenPin = -1;
 
 // RF frequency setting
 uint32_t frequency = 915000000;
@@ -37,6 +37,10 @@ void settingFunction() {
   Serial.println("Setting pins");
   sx127x_setPins(nssPin);
   pinMode(irqPin, INPUT);
+  if (txenPin != -1 && rxenPin != -1) {
+    pinMode(txenPin, OUTPUT);
+    pinMode(rxenPin, OUTPUT);
+  }
 
   // Reset RF module by setting resetPin to LOW and begin SPI communication
   sx127x_reset(resetPin);
@@ -63,6 +67,15 @@ void settingFunction() {
   Serial.print("Set frequency to ");
   Serial.print(frequency / 1000000);
   Serial.println(" MHz");
+
+  // Set rx gain to selected gain
+  Serial.print("Set RX gain to ");
+  if (boost == SX127X_RX_GAIN_POWER_SAVING) Serial.println("power saving gain");
+  else if (boost == SX127X_RX_GAIN_BOOSTED) Serial.println("boosted gain");
+  uint8_t LnaBoostHf = boost ? 0x03 : 0x00;
+  uint8_t AgcOn = level == SX127X_RX_GAIN_AUTO ? 0x01 : 0x00;
+  sx127x_writeRegister(SX127X_REG_LNA, LnaBoostHf | (level << 5));
+  sx127x_writeBits(SX127X_REG_MODEM_CONFIG_3, AgcOn, 2, 1);
 
   // Set modulation param and packet param
   Serial.println("Set modulation with predefined parameters");
@@ -107,6 +120,12 @@ uint8_t receiveFunction(char* message, uint8_t &length) {
   Serial.println("Attach interrupt on IRQ pin");
   attachInterrupt(digitalPinToInterrupt(irqPin), checkReceiveDone, RISING);
 
+  // Set txen and rxen pin state for receiving packet
+  if (txenPin != -1 && rxenPin != -1) {
+    digitalWrite(txenPin, LOW);
+    digitalWrite(rxenPin, HIGH);
+  }
+
   // Receive message
   Serial.println("Receiving message...");
   sx127x_writeRegister(SX127X_REG_OP_MODE, SX127X_LORA_MODEM | SX127X_MODE_RX_CONTINUOUS);
@@ -126,6 +145,9 @@ uint8_t receiveFunction(char* message, uint8_t &length) {
   uint8_t irqStat = sx127x_readRegister(SX127X_REG_IRQ_FLAGS);
   sx127x_writeRegister(SX127X_REG_IRQ_FLAGS, SX127X_IRQ_RX_DONE);
   Serial.println("Clear IRQ status");
+  if (rxenPin != -1) {
+    digitalWrite(rxenPin, LOW);
+  }
 
   // Get FIFO address of received message and configure address pointer
   reg = sx127x_readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR);
@@ -139,6 +161,15 @@ uint8_t receiveFunction(char* message, uint8_t &length) {
   Serial.print("Get message length (");
   Serial.print(length);
   Serial.println(")");
+
+  // Get and display packet status
+  Serial.println("Get received packet status");
+  float rssi = ((int16_t) sx127x_readRegister(SX127X_REG_PKT_RSSI_VALUE) - SX127X_RSSI_OFFSET_HF);
+  float snr = (int8_t) sx127x_readRegister(SX127X_REG_PKT_SNR_VALUE) / 4.0;
+  Serial.print("Packet status: RSSI = ");
+  Serial.print(rssi);
+  Serial.print(" | SNR = ");
+  Serial.println(snr);
 
   // Read message from buffer
   Serial.print("Message in bytes : [ ");

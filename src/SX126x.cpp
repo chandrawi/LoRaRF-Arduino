@@ -4,7 +4,7 @@ void (*SX126x::_onTransmit)();
 
 void (*SX126x::_onReceive)();
 
-uint16_t SX126x::_statusIrq = 0xFFFF;
+volatile uint16_t SX126x::_statusIrq = 0xFFFF;
 
 uint32_t SX126x::_transmitTime = 0;
 
@@ -745,7 +745,9 @@ void SX126x::_interruptTx()
     detachInterrupt(_irqStatic);
 
     // store IRQ status
-    sx126x_getIrqStatus(&_statusIrq);
+    uint16_t buf;
+    sx126x_getIrqStatus(&buf);
+    _statusIrq = buf;
 
     // call onTransmit function
     if (_onTransmit) {
@@ -761,7 +763,9 @@ void SX126x::_interruptRx()
     sx126x_fixRxTimeout();
 
     // store IRQ status
-    sx126x_getIrqStatus(&_statusIrq);
+    uint16_t buf;
+    sx126x_getIrqStatus(&buf);
+    _statusIrq = buf;
 
     // get received payload length and buffer index
     sx126x_getRxBufferStatus(&_payloadTxRx, &_bufferIndex);
@@ -775,7 +779,9 @@ void SX126x::_interruptRx()
 void SX126x::_interruptRxContinuous()
 {
     // store IRQ status
-    sx126x_getIrqStatus(&_statusIrq);
+    uint16_t buf;
+    sx126x_getIrqStatus(&buf);
+    _statusIrq = buf;
 
     // clear IRQ status
     sx126x_clearIrqStatus(0x03FF);

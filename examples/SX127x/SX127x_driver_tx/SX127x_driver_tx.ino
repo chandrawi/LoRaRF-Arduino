@@ -1,12 +1,13 @@
 #include <SX127x_driver.h>
 
 // Pin setting
-int8_t nssPin = 10, resetPin = 9, irqPin = 2, rxenPin = 7, txenPin = 8;
+int8_t nssPin = 10, resetPin = 9, irqPin = 2, rxenPin = -1, txenPin = -1;
 
 // RF frequency setting
 uint32_t frequency = 915000000;
 
 // PA and TX power setting
+uint8_t paConfig = 0xC0;
 uint8_t txPower = 17;
 uint8_t paPin = SX127X_TX_POWER_PA_BOOST;
 
@@ -37,6 +38,10 @@ void settingFunction() {
   Serial.println("Setting pins");
   sx127x_setPins(nssPin);
   pinMode(irqPin, INPUT);
+  if (txenPin != -1 && rxenPin != -1) {
+    pinMode(txenPin, OUTPUT);
+    pinMode(rxenPin, OUTPUT);
+  }
 
   // Reset RF module by setting resetPin to LOW and begin SPI communication
   sx127x_reset(resetPin);
@@ -63,6 +68,15 @@ void settingFunction() {
   Serial.print("Set frequency to ");
   Serial.print(frequency / 1000000);
   Serial.println(" MHz");
+
+  // Set tx power to selected TX power
+  Serial.print("Set TX power to ");
+  Serial.print(txPower, DEC);
+  Serial.println(" dBm");
+  uint8_t outputPower = txPower - 2;
+  uint8_t paDac = txPower > 17 ? 0x07 : 0x04;
+  sx127x_writeRegister(SX127X_REG_PA_DAC, paDac);
+  sx127x_writeRegister(SX127X_REG_PA_CONFIG, paConfig | outputPower);
 
   // Set modulation param and packet param
   Serial.println("Set modulation with predefined parameters");
@@ -137,6 +151,12 @@ uint8_t transmitFunction(char* message, uint8_t length) {
   Serial.println("Attach interrupt on IRQ pin");
   attachInterrupt(digitalPinToInterrupt(irqPin), checkTransmitDone, RISING);
 
+  // Set txen and rxen pin state for transmitting packet
+  if (txenPin != -1 && rxenPin != -1) {
+    digitalWrite(txenPin, HIGH);
+    digitalWrite(rxenPin, LOW);
+  }
+
   // Transmit message
   Serial.println("Transmitting message...");
   sx127x_writeRegister(SX127X_REG_OP_MODE, SX127X_LORA_MODEM | SX127X_MODE_TX);
@@ -159,6 +179,9 @@ uint8_t transmitFunction(char* message, uint8_t length) {
   uint8_t irqStat = sx127x_readRegister(SX127X_REG_IRQ_FLAGS);
   sx127x_writeRegister(SX127X_REG_IRQ_FLAGS, 0xFF);
   Serial.println("Clear IRQ status");
+  if (txenPin != -1) {
+    digitalWrite(txenPin, LOW);
+  }
 
   // return interrupt status
   return irqStat;
