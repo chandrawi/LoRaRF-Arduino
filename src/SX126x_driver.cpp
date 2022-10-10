@@ -23,6 +23,7 @@ void sx126x_reset(int8_t reset)
     digitalWrite(reset, LOW);
     delayMicroseconds(500);
     digitalWrite(reset, HIGH);
+    delayMicroseconds(100);
 }
 
 void sx126x_begin()
@@ -374,9 +375,9 @@ void sx126x_resetStats()
 
 void sx126x_getDeviceErrors(uint16_t* opError)
 {
-    uint8_t buf[2];
-    sx126x_transfer(0x17, buf, 2);
-    *opError = buf[1];
+    uint8_t buf[3];
+    sx126x_transfer(0x17, buf, 3);
+    *opError = buf[2];
 }
 
 void sx126x_clearDeviceErrors()

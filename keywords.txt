@@ -72,6 +72,7 @@ signalRssi	KEYWORD2
 rssiInst	KEYWORD2
 rssi	KEYWORD2
 getError	KEYWORD2
+random	KEYWORD2
 
 # Instances (KEYWORD2)
 
