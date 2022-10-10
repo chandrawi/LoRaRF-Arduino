@@ -23,6 +23,7 @@ void sx126x_reset(int8_t reset)
     digitalWrite(reset, LOW);
     delayMicroseconds(500);
     digitalWrite(reset, HIGH);
+    delayMicroseconds(100);
 }
 
 void sx126x_begin()
