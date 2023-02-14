@@ -362,9 +362,9 @@ void sx126x_getStats(uint16_t* nbPktReceived, uint16_t* nbPktCrcError, uint16_t*
 {
     uint8_t buf[7];
     sx126x_transfer(0x10, buf, 7);
-    *nbPktReceived = (buf[1] >> 8) | buf[2];
-    *nbPktCrcError = (buf[3] >> 8) | buf[4];
-    *nbPktHeaderErr = (buf[5] >> 8) | buf[6];
+    *nbPktReceived = (buf[1] << 8) | buf[2];
+    *nbPktCrcError = (buf[3] << 8) | buf[4];
+    *nbPktHeaderErr = (buf[5] << 8) | buf[6];
 }
 
 void sx126x_resetStats()
