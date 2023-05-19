@@ -46,6 +46,7 @@ class SX127x
         void setOscillator(uint8_t option);
 
         // Modem, modulation parameter, and packet parameter setup methods
+        uint8_t getModem();
         void setModem(uint8_t modem=SX127X_LORA_MODEM);
         void setFrequency(uint32_t frequency);
         void setTxPower(uint8_t txPower, uint8_t paPin=SX127X_TX_POWER_PA_BOOST);

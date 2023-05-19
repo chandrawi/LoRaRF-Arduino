@@ -166,6 +166,13 @@ void SX126x::setCurrentProtection(uint8_t current)
     sx126x_writeRegister(SX126X_REG_OCP_CONFIGURATION, &currentmA, 1);
 }
 
+uint8_t SX126x::getModem()
+{
+    uint8_t modem;
+    sx126x_getPacketType(&modem);
+    return modem;
+}
+
 void SX126x::setModem(uint8_t modem)
 {
     _modem = modem;

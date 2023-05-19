@@ -57,6 +57,7 @@ class SX126x
         void setCurrentProtection(uint8_t current);
 
         // Modem, modulation parameter, and packet parameter setup methods
+        uint8_t getModem();
         void setModem(uint8_t modem=SX126X_LORA_MODEM);
         void setFrequency(uint32_t frequency);
         void setTxPower(uint8_t txPower, uint8_t version=SX126X_TX_POWER_SX1262);

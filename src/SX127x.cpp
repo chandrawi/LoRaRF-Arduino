@@ -126,13 +126,23 @@ void SX127x::setOscillator(uint8_t option)
     sx127x_writeRegister(SX127X_REG_TCXO, cfg);
 }
 
+uint8_t SX127x::getModem()
+{
+    uint8_t modem = sx127x_readRegister(SX127X_REG_OP_MODE);
+    if (modem & 0x20) {
+        return SX127X_OOK_MODEM;
+    }
+    return modem >> 7;
+}
+
 void SX127x::setModem(uint8_t modem)
 {
     if (modem == SX127X_LORA_MODEM) _modem = SX127X_LONG_RANGE_MODE;
     else if (modem == SX127X_FSK_MODEM) _modem = SX127X_MODULATION_FSK;
     else _modem = SX127X_MODULATION_OOK;
     sleep();
-    sx127x_writeRegister(SX127X_REG_OP_MODE, _modem | SX127X_MODE_STDBY);
+    sx127x_writeRegister(SX127X_REG_OP_MODE, _modem);
+    standby();
 }
 
 void SX127x::setFrequency(uint32_t frequency)
