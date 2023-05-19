@@ -307,7 +307,7 @@ void sx126x_fixRxTimeout();
 void sx126x_fixInvertedIq(uint8_t invertIq);
 
 // Utilities
-void sx126x_transfer(uint8_t opCode, uint8_t* data, uint8_t nBytes);
-void sx126x_transfer(uint8_t opCode, uint8_t* data, uint8_t nBytes, uint8_t* address, uint8_t nAddress);
+void sx126x_transfer(uint8_t opCode, uint8_t* data, uint8_t nData);
+void sx126x_transfer(uint8_t opCode, uint8_t* data, uint8_t nData, uint8_t* address, uint8_t nAddress, bool read);
 
 #endif

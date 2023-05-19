@@ -140,40 +140,26 @@ void sx126x_setRxTxFallbackMode(uint8_t fallbackMode)
 
 void sx126x_writeRegister(uint16_t address, uint8_t* data, uint8_t nData)
 {
-    uint8_t nBuf = nData + 2;
-    uint8_t buf[nBuf];
-    buf[0] = address >> 8;
-    buf[1] = address;
-    for(uint8_t i=0; i<nData; i++) buf[i + 2] = data[i];
-    sx126x_transfer(0x0D, buf, nBuf);
+    uint8_t bufAdr[2] = {address >> 8, address};
+    sx126x_transfer(0x0D, data, nData, bufAdr, 2, false);
 }
 
 void sx126x_readRegister(uint16_t address, uint8_t* data, uint8_t nData)
 {
-    uint8_t nBuf = nData + 1;
-    uint8_t buf[nBuf];
-    uint8_t addr[2];
-    addr[0] = address >> 8;
-    addr[1] = address;
-    sx126x_transfer(0x1D, buf, nBuf, addr, 2);
-    for(uint8_t i=0; i<nData; i++) data[i] = buf[i + 1];
+    uint8_t bufAdr[3] = {address >> 8, address, 0x00};
+    sx126x_transfer(0x1D, data, nData, bufAdr, 3, true);
 }
 
 void sx126x_writeBuffer(uint8_t offset, uint8_t* data, uint8_t nData)
 {
-    uint8_t nBuf = nData + 1;
-    uint8_t buf[nBuf];
-    buf[0] = offset;
-    for(uint8_t i=0; i<nData; i++) buf[i + 1] = data[i];
-    sx126x_transfer(0x0E, buf, nBuf);
+    uint8_t bufOfs[1] = {offset};
+    sx126x_transfer(0x0E, data, nData, bufOfs, 1, false);
 }
 
 void sx126x_readBuffer(uint8_t offset, uint8_t* data, uint8_t nData)
 {
-    uint8_t nBuf = nData + 1;
-    uint8_t buf[nBuf];
-    sx126x_transfer(0x1E, buf, nBuf, &offset, 1);
-    for(uint8_t i=0; i<nData; i++) data[i] = buf[i + 1];
+    uint8_t bufOfs[2] = {offset, 0x00};
+    sx126x_transfer(0x1E, data, nData, bufOfs, 2, true);
 }
 
 void sx126x_setDioIrqParams(uint16_t irqMask, uint16_t dio1Mask, uint16_t dio2Mask, uint16_t dio3Mask)
@@ -423,12 +409,12 @@ void sx126x_fixInvertedIq(uint8_t invertIq)
     sx126x_writeRegister(SX126X_REG_IQ_POLARITY_SETUP, &value, 1);
 }
 
-void sx126x_transfer(uint8_t opCode, uint8_t* data, uint8_t nBytes)
+void sx126x_transfer(uint8_t opCode, uint8_t* data, uint8_t nData)
 {
-    sx126x_transfer(opCode, data, nBytes, NULL, 0);
+    sx126x_transfer(opCode, data, nData, NULL, 0, true);
 }
 
-void sx126x_transfer(uint8_t opCode, uint8_t* data, uint8_t nBytes, uint8_t* address, uint8_t nAddress)
+void sx126x_transfer(uint8_t opCode, uint8_t* data, uint8_t nData, uint8_t* address, uint8_t nAddress, bool read)
 {
     if (sx126x_busyCheck(SX126X_BUSY_TIMEOUT)) return;
 
@@ -436,7 +422,10 @@ void sx126x_transfer(uint8_t opCode, uint8_t* data, uint8_t nBytes, uint8_t* add
     sx126x_spi->beginTransaction(SPISettings(sx126x_spiFrequency, MSBFIRST, SPI_MODE0));
     sx126x_spi->transfer(opCode);
     for (int8_t i=0; i<nAddress; i++) sx126x_spi->transfer(address[i]);
-    for (int8_t i=0; i<nBytes; i++) data[i] = sx126x_spi->transfer(data[i]);
+    for (int8_t i=0; i<nData; i++) {
+        if (read) data[i] = sx126x_spi->transfer(data[i]);
+        else sx126x_spi->transfer(data[i]);
+    }
     sx126x_spi->endTransaction();
     digitalWrite(sx126x_nss, HIGH);
 }
