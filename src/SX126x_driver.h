@@ -57,6 +57,7 @@
 // SetPaConfig
 #define SX126X_TX_POWER_SX1261                  0x01        // device version for TX power: SX1261
 #define SX126X_TX_POWER_SX1262                  0x02        //                            : SX1262
+#define SX126X_TX_POWER_LLCC68                  0x06        //                            : LLCC68
 #define SX126X_TX_POWER_SX1268                  0x08        //                            : SX1268
 
 // SetRxTxFallbackMode

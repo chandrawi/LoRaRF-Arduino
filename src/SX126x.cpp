@@ -238,7 +238,7 @@ void SX126x::setTxPower(uint8_t txPower, uint8_t version)
         paDutyCycle = 0x04;
         hpMax = 0x00;
         power = 0x0E;
-    } else if (txPower >= 14 && version == SX126X_TX_POWER_SX1262) {
+    } else if (txPower >= 14 && (version == SX126X_TX_POWER_SX1262 || version == SX126X_TX_POWER_LLCC68)) {
         paDutyCycle = 0x02;
         hpMax = 0x02;
         power = 0x16;
@@ -250,7 +250,7 @@ void SX126x::setTxPower(uint8_t txPower, uint8_t version)
         paDutyCycle = 0x01;
         hpMax = 0x00;
         power = 0x0D;
-    } else if (txPower >= 10 && version == SX126X_TX_POWER_SX1268) {
+    } else if (txPower >= 10 && (version == SX126X_TX_POWER_SX1268 || version == SX126X_TX_POWER_LLCC68)) {
         paDutyCycle = 0x00;
         hpMax = 0x03;
         power = 0x0F;
