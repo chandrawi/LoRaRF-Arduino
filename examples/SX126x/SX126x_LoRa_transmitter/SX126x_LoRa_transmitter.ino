@@ -46,7 +46,7 @@ void setup() {
   Serial.println("Set frequency to 915 Mhz");
   LoRa.setFrequency(915000000);
 
-  // Set TX power, default power for SX1262 and SX1268 are +22 dBm and for SX1261 is +14 dBm
+  // Set TX power, default power for SX1262, SX1268 and LLCC68 are +22 dBm and for SX1261 is +14 dBm
   // This function will set PA config with optimal setting for requested TX power
   Serial.println("Set TX power to +17 dBm");
   LoRa.setTxPower(17, SX126X_TX_POWER_SX1262);                        // TX power +17 dBm for SX1262
